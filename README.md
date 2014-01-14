@@ -12,7 +12,8 @@ In greek mythology Hecuba (http://en.wikipedia.org/wiki/Hecuba) is the mother of
 Features
 ========
 
- - Hecuba supports all the regular methods to interact with Cassandra including gets, multigets, row and column slices, writes and deletes. 
- - Hecuba can be used to maintain your own secondary index without relying on Cassandra's implementation of secondary indexes. The main difference here is that Cassandra implementation tries to maintain the locality of the secondary indexes with the knowledge of the topology whereas hecuba implementation consider secondary index as another independent column family with pointers to the main table. 
+ 
+- Hecuba supports all the regular methods to interact with Cassandra including gets, multigets, row and column slices, writes and deletes. 
+- Hecuba can be used to maintain your own secondary index without relying on Cassandra's implementation of secondary indexes. The main difference here is that Cassandra implementation tries to maintain the locality of the secondary indexes with the knowledge of the topology whereas hecuba implementation consider secondary index as another independent column family with pointers to the main table. 
 
  
