@@ -33,10 +33,10 @@ Usage
     parameters.setKeyType("Long") // the java type of the keys of the cassandra cluster. This can be either Long or String.
     
     // initialize a client based on Astyanax
-    //XCacheCassandraManager<String> cassandraManager = new AstyanaxBasedXCacheCassandraManager<String>(parameters, com.netflix.astyanax.serializer.StringSerializer.get());
+    //HecubaClientManager<String> cassandraManager = new AstyanaxBasedHecubaClientManager<String>(parameters, com.netflix.astyanax.serializer.StringSerializer.get());
 
     // or initialize a client based on Hector
-    XCacheCassandraManager<String> cassandraManager = new HectorBasedXCacheCassandraManager<String>(parameters, me.prettyprint.cassandra.serializers.StringSerializer.get(), true);
+    HecubaClientManager<String> cassandraManager = new HectorBasedHecubaClientManager<String>(parameters, me.prettyprint.cassandra.serializers.StringSerializer.get(), true);
 ```
 
 ### Write data 
