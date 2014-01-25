@@ -7,7 +7,7 @@ Hecuba is currently in use in Wize Commerce and is being actively developed.
 
 Why Hecuba
 ==========
-In greek mythology [Hecuba][http://en.wikipedia.org/wiki/Hecuba] is the mother of [Hector][http://en.wikipedia.org/wiki/Hector] and [Cassandra][http://en.wikipedia.org/wiki/Cassandra] and grand mother of [Asytanax][http://en.wikipedia.org/wiki/Astyanax]. Whereas in NoSQL world Cassandra is a NoSQL storage, Hector and Astyanax are clients (Astyanax had initially spawned off of Hector) and Hecuba is the abstraction over Astyanax and Hector.    
+In greek mythology [Hecuba](http://en.wikipedia.org/wiki/Hecuba) is the mother of [Hector](http://en.wikipedia.org/wiki/Hector) and [Cassandra](http://en.wikipedia.org/wiki/Cassandra) and grand mother of [Asytanax](http://en.wikipedia.org/wiki/Astyanax). Whereas in NoSQL world Cassandra is a NoSQL storage, Hector and Astyanax are clients (Astyanax had initially spawned off of Hector) and Hecuba is the abstraction over Astyanax and Hector.    
 
 Features
 ========
