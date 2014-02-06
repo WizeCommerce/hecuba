@@ -1731,6 +1731,60 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		testUpdateRowResults(timestamps, ttls, "testUpdateRowScenario1");
 	}
 
+	/**
+	 * test update of Row which contains column with TTL and that column is also a secondary index.
+	 */
+	@Test
+	public void testUpdateRowScenario17() {
+		String columnFamily = "testUpdateRowScenario17";
+
+		CassandraParamsBean bean = new CassandraParamsBean();
+		bean.setClustername(CLUSTER_NAME);
+		bean.setLocationURLs(LOCATION);
+		bean.setThriftPorts(PORT);
+		bean.setKeyspace(KEYSPACE);
+		bean.setCf(columnFamily);
+		bean.setSiColumns("MySecondaryKey_1:MySecondaryKey_2");
+
+		// retrieve the cassandra manager.
+		HecubaClientManager<Long> cassandraManager = getHecubaClientManager(bean);
+
+		// insert the record 1234L with columns having secondary indices.
+		HashMap<String, Object> row = new HashMap<String, Object>();
+		row.put("column_1", "value_1");
+		row.put("column_2", "value_2");
+		row.put("MySecondaryKey_1", "MySecondaryKey_1_value_1");
+		row.put("MySecondaryKey_2", "MySecondaryKey_2_value_2");
+		// TTL on MySecondaryKey_1 of 1 sec
+		Map<String, Integer> ttls = new HashMap<String, Integer>();
+		ttls.put("MySecondaryKey_1", 2);
+		cassandraManager.updateRow(1234L, row, null, ttls);
+
+		// Sleep for MySecondaryKey_1 column (with 1 sec TTL) to expire
+		try {
+			Thread.sleep(1000 * (1 + ttls.get("MySecondaryKey_1")));
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+		// now lets see whether we can retrieve this item by the secondary indices.
+		// Since MySecondaryKey_1 column is expired, it's secondary index should also expire
+		final CassandraResultSet<Long, String> resultSetRetrievedUsingSecondaryIdx1 =
+				cassandraManager.retrieveBySecondaryIndex("MySecondaryKey_1", "MySecondaryKey_1_value_1");
+		assertNull(resultSetRetrievedUsingSecondaryIdx1);
+		
+		// We should be able to retrieve using secondary index on MySecondaryKey_2
+		final CassandraResultSet<Long, String> resultSetRetrievedUsingSecondaryIdx2 =
+				cassandraManager.retrieveBySecondaryIndex("MySecondaryKey_2", "MySecondaryKey_2_value_2");
+		assertNotNull(resultSetRetrievedUsingSecondaryIdx2);
+		assertNotNull(resultSetRetrievedUsingSecondaryIdx2.getColumnNames());
+		assertEquals(row.size() - 1, resultSetRetrievedUsingSecondaryIdx2.getColumnNames().size()); //MySecondaryKey_1 column is expired
+		for (String columnName : resultSetRetrievedUsingSecondaryIdx2.getColumnNames()) {
+			assertEquals(row.get(columnName), resultSetRetrievedUsingSecondaryIdx2.getString(columnName));
+		}
+	}
+	
+	
 	@Test
 	public void outOfOrderDeleteTest() throws Exception {
 		final long SECOND_KEY = 112233L;

@@ -17,9 +17,17 @@
  */
 package com.wizecommerce.hecuba.hector;
 
-import com.google.common.base.Joiner;
-import com.wizecommerce.hecuba.*;
-import com.wizecommerce.hecuba.util.ConfigUtils;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import me.prettyprint.cassandra.connection.HConnectionManager;
 import me.prettyprint.cassandra.model.IndexedSlicesQuery;
 import me.prettyprint.cassandra.model.thrift.ThriftCounterColumnQuery;
@@ -35,7 +43,11 @@ import me.prettyprint.hector.api.Cluster;
 import me.prettyprint.hector.api.ConsistencyLevelPolicy;
 import me.prettyprint.hector.api.Keyspace;
 import me.prettyprint.hector.api.Serializer;
-import me.prettyprint.hector.api.beans.*;
+import me.prettyprint.hector.api.beans.ColumnSlice;
+import me.prettyprint.hector.api.beans.HColumn;
+import me.prettyprint.hector.api.beans.HCounterColumn;
+import me.prettyprint.hector.api.beans.OrderedRows;
+import me.prettyprint.hector.api.beans.Rows;
 import me.prettyprint.hector.api.ddl.ColumnFamilyDefinition;
 import me.prettyprint.hector.api.ddl.KeyspaceDefinition;
 import me.prettyprint.hector.api.exceptions.HectorException;
@@ -46,13 +58,21 @@ import me.prettyprint.hector.api.query.CounterQuery;
 import me.prettyprint.hector.api.query.MultigetSliceQuery;
 import me.prettyprint.hector.api.query.QueryResult;
 import me.prettyprint.hector.api.query.SliceQuery;
+
 import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 
-import java.nio.ByteBuffer;
-import java.util.*;
+import com.google.common.base.Joiner;
+import com.wizecommerce.hecuba.CassandraColumn;
+import com.wizecommerce.hecuba.CassandraParamsBean;
+import com.wizecommerce.hecuba.CassandraResultSet;
+import com.wizecommerce.hecuba.ColumnFamilyInfo;
+import com.wizecommerce.hecuba.HecubaClientManager;
+import com.wizecommerce.hecuba.HecubaConstants;
+import com.wizecommerce.hecuba.util.ConfigUtils;
 
 /**
  * Configuring Hector Clients:
@@ -385,12 +405,12 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 
 		if (isSecondaryIndexByColumnNameAndValueEnabled && secondaryColumnsChanged != null &&
 				secondaryColumnsChanged.size() > 0) {
-			updateSecondaryIndexes(key, row, secondaryColumnsChanged);
+			updateSecondaryIndexes(key, row, secondaryColumnsChanged, ttls);
 		}
 
 		if (isSecondaryIndexesByColumnNamesEnabled && secondaryIndexByColumnNameChanges != null &&
 				secondaryIndexByColumnNameChanges.size() > 0) {
-			updateColumnNameBasedSecondaryIndices(key, secondaryIndexByColumnNameChanges);
+			updateColumnNameBasedSecondaryIndices(key, secondaryIndexByColumnNameChanges, ttls);
 		}
 
 
@@ -406,26 +426,34 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 
 	}
 
-	private void updateColumnNameBasedSecondaryIndices(K key, List<String> secondaryIndexByColumnNameChanges) {
+	private void updateColumnNameBasedSecondaryIndices(K key, List<String> secondaryIndexByColumnNameChanges, Map<String, Integer> ttls) {
 
 		final Mutator<String> secondaryIndexMutator = HFactory.createMutator(keysp, StringSerializer.get());
 		String secondaryIndexCF = secondaryIndexedColumnFamilyTemplate.getColumnFamily();
 
+		boolean ttlsDefined = MapUtils.isNotEmpty(ttls);
+		
 		for (String secondaryIndexByColumnName : secondaryIndexByColumnNameChanges) {
-			secondaryIndexMutator.addInsertion(getSecondaryIndexKey(secondaryIndexByColumnName, ""), secondaryIndexCF,
-											   HFactory.createColumn(key, key, keysp.createClock(), keySerializer,
-																	 keySerializer));
+			int ttl = -1;
+			if (ttlsDefined && ttls.get(secondaryIndexByColumnName) != null) {
+				ttl = ttls.get(secondaryIndexByColumnName);
+			}
+			HColumn<K, K> hColumn;
+			if (ttl > 0) {
+				hColumn = HFactory.createColumn(key, key, keysp.createClock(), ttl, keySerializer, keySerializer);
+			} else {
+				hColumn = HFactory.createColumn(key, key, keysp.createClock(), keySerializer, keySerializer);
+			}
+			secondaryIndexMutator.addInsertion(getSecondaryIndexKey(secondaryIndexByColumnName, ""), secondaryIndexCF, hColumn);
 		}
 		MutationResult execute = secondaryIndexMutator.execute();
-		log.debug(secondaryIndexByColumnNameChanges.size() + " secondary Indexes got updated for the key " +
-						  key.toString() +
-						  ". Exec Time = " +
-						  execute.getExecutionTimeMicro() + ", Host used = " + execute.getHostUsed());
+		log.debug(secondaryIndexByColumnNameChanges.size() + " secondary Indexes got updated for the key " + key.toString() + 
+				". Exec Time = " + execute.getExecutionTimeMicro() + ", Host used = " + execute.getHostUsed());
 
 	}
 
 	protected void updateSecondaryIndexes(K key, Map<String, Object> allColumnsToBeChanged,
-										  List<String> secondaryColumnsChanged) {
+										  List<String> secondaryColumnsChanged, Map<String, Integer> ttls) {
 
 		final Mutator<String> secondaryIndexMutator = HFactory.createMutator(keysp, StringSerializer.get());
 		String secondaryIndexCF = secondaryIndexedColumnFamilyTemplate.getColumnFamily();
@@ -436,13 +464,13 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 			String oldValue = readString(key, columnName);
 			log.info("Updating secondary index for Key = " + key + " column = " + columnName);
 			prepareMutatorForSecondaryIndexUpdate(key, allColumnsToBeChanged, secondaryIndexMutator, secondaryIndexCF,
-												  columnName, oldValue);
+												  columnName, oldValue, ttls);
 		} else {
 			CassandraResultSet<K, String> oldValues = readColumns(key, secondaryColumnsChanged);
 			for (String columnName : secondaryColumnsChanged) {
 				String oldValue = oldValues.getString(columnName);
 				prepareMutatorForSecondaryIndexUpdate(key, allColumnsToBeChanged, secondaryIndexMutator,
-													  secondaryIndexCF, columnName, oldValue);
+													  secondaryIndexCF, columnName, oldValue, ttls);
 			}
 		}
 
@@ -455,18 +483,26 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 
 	private void prepareMutatorForSecondaryIndexUpdate(K key, Map<String, Object> allColumnsToBeChanged,
 													   Mutator<String> secondaryIndexMutator, String secondaryIndexCF,
-													   String columnName, String oldValue) {
+													   String columnName, String oldValue, Map<String, Integer> ttls) {
 		if (!StringUtils.isBlank(oldValue) && !"null".equalsIgnoreCase(oldValue)) {
 			// delete those indexes first
 			secondaryIndexMutator.addDeletion(getSecondaryIndexKey(columnName, oldValue), secondaryIndexCF, key,
 											  keySerializer);
 		}
-
+		
+		int ttl = -1;
+		if (ttls != null && ttls.get(columnName) != null) {
+			ttl = ttls.get(columnName);
+		}
+		
 		// add the new ones
-		secondaryIndexMutator.addInsertion(getSecondaryIndexKey(columnName, allColumnsToBeChanged.get(columnName)
-																								 .toString()),
-										   secondaryIndexCF, HFactory.createColumn(key, key, keysp.createClock(),
-																				   keySerializer, keySerializer));
+		if (ttl > 0) {
+			secondaryIndexMutator.addInsertion(getSecondaryIndexKey(columnName, allColumnsToBeChanged.get(columnName)
+					.toString()), secondaryIndexCF, HFactory.createColumn(key, key, keysp.createClock(), ttl, keySerializer, keySerializer));
+		} else {
+			secondaryIndexMutator.addInsertion(getSecondaryIndexKey(columnName, allColumnsToBeChanged.get(columnName)
+					.toString()), secondaryIndexCF, HFactory.createColumn(key, key, keysp.createClock(), keySerializer, keySerializer));
+		}
 	}
 
 	private void updateSecondaryIndexByColumNames(K key, String columnName, long timestamp, int ttl) {
