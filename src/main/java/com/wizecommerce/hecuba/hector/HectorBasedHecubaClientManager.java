@@ -967,21 +967,21 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + ".hectorpools.loadbalancingpolicy",
 				"DynamicLoadBalancingPolicy"));
 		hectorClientConfiguration.setMaxActive(configuration.getInteger(
-				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + "hectorpools.maxactive", 50));
+				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + ".hectorpools.maxactive", 50));
 		hectorClientConfiguration.setMaxIdle(configuration.getInteger(
-				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + "hectorpools.maxidle", -1));
+				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + ".hectorpools.maxidle", -1));
 
 		hectorClientConfiguration.setRetryDownedHosts(configuration.getBoolean(
-				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + "hectorpools.retrydownedhosts", true));
+				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + ".hectorpools.retrydownedhosts", true));
 
 		hectorClientConfiguration.setRetryDownedHostsDelayInSeconds(configuration.getInteger(
-				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + "hectorpools.retrydownedhostsinseconds", 30));
+				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + ".hectorpools.retrydownedhostsinseconds", 30));
 
 		hectorClientConfiguration.setThriftSocketTimeout(configuration.getInteger(
-				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + "hectorpools.thriftsockettimeout", 100));
+				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + ".hectorpools.thriftsockettimeout", 100));
 
 		hectorClientConfiguration.setUseThriftFramedTransport(configuration.getBoolean(
-				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + "hectorpools.usethriftframedtransport", true));
+				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + ".hectorpools.usethriftframedtransport", true));
 	}
 
 	private void reConfigureParameters() {
