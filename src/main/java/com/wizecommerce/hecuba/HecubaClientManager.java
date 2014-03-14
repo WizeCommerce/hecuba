@@ -14,12 +14,19 @@
 
 package com.wizecommerce.hecuba;
 
-import com.wizecommerce.hecuba.util.ConfigUtils;
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
 
-import java.nio.ByteBuffer;
-import java.util.*;
+import com.wizecommerce.hecuba.util.ConfigUtils;
 
 /**
  * This is a convenience class that will enable a user to interact with Column Families. It is
@@ -124,7 +131,7 @@ public abstract class HecubaClientManager<K> {
 	 * @param columnFamily - the column family you will be managing using this manager.
 	 */
 	public HecubaClientManager(String clusterName, String locationURL, String ports, String keyspace,
-							   String columnFamily) {
+			String columnFamily) {
 		super();
 		this.clusterName = clusterName;
 		this.locationURLs = locationURL;
@@ -319,7 +326,7 @@ public abstract class HecubaClientManager<K> {
 	 * @param ttls       - a map of column names to their ttls. Defaults to not expire.
 	 */
 	public abstract void updateRow(K key, Map<String, Object> row, Map<String, Long> timestamps,
-								   Map<String, Integer> ttls);
+			Map<String, Integer> ttls);
 
 	/**
 	 * Reads the value of a column related to a given key.
@@ -441,7 +448,7 @@ public abstract class HecubaClientManager<K> {
 	 *         set)
 	 */
 	public abstract CassandraResultSet<K, String> readColumnSlice(K key, String start, String end, boolean reversed,
-																  int count);
+			int count);
 
 	/**
 	 * Retrieves all columns (upto a limit of 10000 columns) for the key. </br>
@@ -457,8 +464,6 @@ public abstract class HecubaClientManager<K> {
 	public CassandraResultSet<K, String> readColumnSliceAllColumns(K key) {
 		return readColumnSlice(key, null, null, false, 10000);
 	}
-
-	public abstract CassandraResultSet readAllColumnsBySecondaryIndex(Map<String, String> parameters, int limit);
 
 	/**
 	 * Get the value of a counter and returns 0 if the counter is not available.
@@ -531,7 +536,7 @@ public abstract class HecubaClientManager<K> {
 	 *         If any key(s) doesn't exist in Cassandra, returned ResultSet will contain no column for those key(s).
 	 */
 	public abstract CassandraResultSet<K, String> readColumnSlice(Set<K> keys, String start, String end,
-																  boolean reversed, int count);
+			boolean reversed, int count);
 
 	/**
 	 * Retrieves all columns (upto a limit of 10000 columns) for set of keys. </br>
@@ -604,6 +609,8 @@ public abstract class HecubaClientManager<K> {
 	// Secondary Index Related Methods
 	// ====================================================
 
+	public abstract CassandraResultSet readAllColumnsBySecondaryIndex(Map<String, String> parameters, int limit);
+
 	/**
 	 * We are indexing based on the name of the column AND the value stored under that column. For example,
 	 * if we have a person column family, keyed by person id/name, we might also want to retrieve the people by the
@@ -644,6 +651,43 @@ public abstract class HecubaClientManager<K> {
 	 * @return
 	 */
 	public abstract CassandraResultSet<K, String> retrieveByColumnNameBasedSecondaryIndex(String columnName);
+
+	/**
+	 * We are indexing based on the name of the column AND the value stored under that column.
+	 * Sometimes there are use cases to only retrieve keys (and not all columns) using secondary index.
+	 * Furthermore, after retrieving keys, client can retrieve only specific columns using {@link HecubaClientManager#readColumns(Object, List)}
+	 * <p/>
+	 * {@link HecubaClientManager#retrieveBySecondaryIndex(String, String)} returns {@link CassandraResultSet} by reading allColumns
+	 * 
+	 * @param columnName - Cassandra column name which is secondary indexed
+	 * @param columnValue - Cassandra column value which is secondary indexed
+	 * @return ordered list of keys
+	 */
+	public abstract List<K> retrieveKeysBySecondaryIndex(String columnName, String columnValue);
+
+	/**
+	 * We are indexing based on the name of the column AND the value stored under that column.
+	 * Retrieve keys using secondary index for multiple column values.
+	 * This is a multi-get for {@link HecubaClientManager#retrieveKeysBySecondaryIndex(String, String)}
+	 * <p/>
+	 * {@link HecubaClientManager#retrieveBySecondaryIndex(String, List)} returns result by reading allColumns
+
+	 * @param columnName - Cassandra column name which is secondary indexed
+	 * @param columnValues - list of cassandra column values which are secondary indexed
+	 * @return map of columnValue to list of keys for that column value
+	 */
+	public abstract Map<String, List<K>> retrieveKeysBySecondaryIndex(String columnName, List<String> columnValues);
+
+	/**
+	 * There are scenarios where we need to create secondary indexes only on the name of the column name.
+	 * Sometimes there are use cases to only retrieve keys (and not all columns) using secondary index.
+	 * Furthermore, after retrieving keys, client can retrieve only specific columns using {@link HecubaClientManager#readColumns(Object, List)}
+	 * <p/>
+	 * {@link HecubaClientManager#retrieveByColumnNameBasedSecondaryIndex(String)} returns result by reading allColumns
+	 * @param columnName
+	 * @return
+	 */
+	public abstract List<K> retrieveKeysByColumnNameBasedSecondaryIndex(String columnName);
 
 	// ====================================================
 	// Utils
@@ -735,6 +779,26 @@ public abstract class HecubaClientManager<K> {
 
 	public String getSecondaryIndexKey(String columnName, String columnValue) {
 		return columnName + ":" + columnValue;
+	}
+
+	protected String getSecondaryIndexedColumnValue(String secondaryIndexKey) {
+		if (secondaryIndexKey.length() > secondaryIndexKey.indexOf(":") + 1) {
+			return secondaryIndexKey.substring(secondaryIndexKey.indexOf(":") + 1, secondaryIndexKey.length());
+		} else {
+			return "";
+		}
+	}
+
+	protected List<String> getSecondaryIndexKeys(String columnName, List<String> columnValues) {
+		List<String> secondaryIndexKeys = null;
+		if (columnValues != null && columnValues.size() > 0) {
+			secondaryIndexKeys = new ArrayList<>();
+			for (String columnValue : columnValues) {
+				secondaryIndexKeys.add(getSecondaryIndexKey(columnName, columnValue));
+			}
+		}
+
+		return secondaryIndexKeys;
 	}
 
 	protected boolean isSecondaryIndexByColumnNameEnabledForColumn(String columnName) {
