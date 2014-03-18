@@ -28,9 +28,33 @@
 
 package com.wizecommerce.hecuba.astyanax;
 
+import java.nio.ByteBuffer;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+import org.apache.commons.collections.CollectionUtils;
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.configuration.Configuration;
+import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.exception.ExceptionUtils;
+
 import com.google.common.base.Joiner;
-import com.netflix.astyanax.*;
+import com.netflix.astyanax.AstyanaxContext;
+import com.netflix.astyanax.Clock;
+import com.netflix.astyanax.Cluster;
+import com.netflix.astyanax.ColumnListMutation;
+import com.netflix.astyanax.Keyspace;
+import com.netflix.astyanax.MutationBatch;
+import com.netflix.astyanax.Serializer;
 import com.netflix.astyanax.clock.ClockType;
+import com.netflix.astyanax.connectionpool.Host;
+import com.netflix.astyanax.connectionpool.HostStats;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
@@ -40,21 +64,23 @@ import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
 import com.netflix.astyanax.connectionpool.impl.SmaLatencyScoreStrategyImpl;
 import com.netflix.astyanax.ddl.KeyspaceDefinition;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
-import com.netflix.astyanax.model.*;
+import com.netflix.astyanax.model.Column;
+import com.netflix.astyanax.model.ColumnFamily;
+import com.netflix.astyanax.model.ColumnList;
+import com.netflix.astyanax.model.Row;
+import com.netflix.astyanax.model.Rows;
 import com.netflix.astyanax.query.ColumnQuery;
 import com.netflix.astyanax.query.PreparedIndexExpression;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
-import com.wizecommerce.hecuba.*;
+import com.wizecommerce.hecuba.CassandraColumn;
+import com.wizecommerce.hecuba.CassandraParamsBean;
+import com.wizecommerce.hecuba.CassandraResultSet;
+import com.wizecommerce.hecuba.ColumnFamilyInfo;
+import com.wizecommerce.hecuba.HecubaClientManager;
+import com.wizecommerce.hecuba.HecubaConstants;
 import com.wizecommerce.hecuba.util.ConfigUtils;
-import org.apache.commons.collections.CollectionUtils;
-import org.apache.commons.configuration.Configuration;
-import org.apache.commons.lang.StringUtils;
-import org.apache.commons.lang.exception.ExceptionUtils;
-
-import java.nio.ByteBuffer;
-import java.util.*;
 
 
 /**
@@ -79,7 +105,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 	}
 
 	public AstyanaxBasedHecubaClientManager(String clusterName, String locationUrls, String port, String keyspaceName,
-											String columnFamily, Serializer<K> keySerializer) {
+			String columnFamily, Serializer<K> keySerializer) {
 
 		super(clusterName, locationUrls, port, keyspaceName, columnFamily);
 
@@ -100,7 +126,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 					HecubaConstants.GLOBAL_PROP_NAME_PREFIX + "." + columnFamily + ".secondaryIndexCF",
 					columnFamily.getName() + HecubaConstants.SECONDARY_INDEX_CF_NAME_SUFFIX);
 			this.secondaryIndexColumnFamily = new ColumnFamily<String, K>(secondaryIndexedColumnFamily,
-																		  StringSerializer.get(), keySerializer);
+					StringSerializer.get(), keySerializer);
 
 
 		}
@@ -112,13 +138,13 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		astyanaxConfigurationImpl.setDiscoveryType(NodeDiscoveryType.valueOf(configuration.getString(
 				HecubaConstants.ASTYANAX_NODE_DISCOVERY_TYPE, "RING_DESCRIBE")));
 		astyanaxConfigurationImpl.setConnectionPoolType(ConnectionPoolType.
-																				  valueOf(configuration.getString(
-																						  HecubaConstants.ASTYANAX_CONNECTION_POOL_TYPE,
-																						  "TOKEN_AWARE")));
+				valueOf(configuration.getString(
+						HecubaConstants.ASTYANAX_CONNECTION_POOL_TYPE,
+						"TOKEN_AWARE")));
 
 		connectionPoolConfigurationImpl = new ConnectionPoolConfigurationImpl("MyConnectionPool").setPort(
 				Integer.parseInt(port)).setSeeds(getListOfNodesAndPorts(locationUrls, port)).setMaxConnsPerHost(
-				configuration.getInteger(HecubaConstants.ASTYANAX_MAX_CONNS_PER_HOST, 3));
+						configuration.getInteger(HecubaConstants.ASTYANAX_MAX_CONNS_PER_HOST, 3));
 
 		// Will resort hosts per token partition every 10 seconds
 		SmaLatencyScoreStrategyImpl smaLatencyScoreStrategyImpl = new SmaLatencyScoreStrategyImpl(
@@ -131,9 +157,9 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 
 		connectionPoolMonitor = new CountingConnectionPoolMonitor();
 		context = new AstyanaxContext.Builder().forCluster(clusterName).forKeyspace(keyspaceName)
-											   .withAstyanaxConfiguration(astyanaxConfigurationImpl)
-											   .withConnectionPoolConfiguration(connectionPoolConfigurationImpl)
-											   .withConnectionPoolMonitor(connectionPoolMonitor).buildKeyspace(
+				.withAstyanaxConfiguration(astyanaxConfigurationImpl)
+				.withConnectionPoolConfiguration(connectionPoolConfigurationImpl)
+				.withConnectionPoolMonitor(connectionPoolMonitor).buildKeyspace(
 						ThriftFamilyFactory.getInstance());
 
 		context.start();
@@ -180,7 +206,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 	}
 
 	private void updateSecondaryIndexColumnFamily(K key, String columnName, String value, int ttl,
-												  MutationBatch mutationBatch, String oldValue) {
+			MutationBatch mutationBatch, String oldValue) {
 		// enqueue a deletion to the secondary index to remove the previous value of this column.
 		if (!StringUtils.isBlank(oldValue) && !"null".equalsIgnoreCase(oldValue)) {
 			mutationBatch.withRow(secondaryIndexColumnFamily, getSecondaryIndexKey(columnName, oldValue)).deleteColumn(
@@ -190,10 +216,10 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 
 		// add the new value to the secondary index CF. Make sure to handle the TTLs properly.
 		mutationBatch.withRow(secondaryIndexColumnFamily, getSecondaryIndexKey(columnName, value)).putColumn(key, key,
-																											 keySerializer,
-																											 ttl > 0 ?
-																													 ttl :
-																													 null);
+				keySerializer,
+				ttl > 0 ?
+						ttl :
+							null);
 	}
 
 	@Override
@@ -216,9 +242,9 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 	public AstyanaxContext<Cluster> initiateClusterContext(String clusterName) {
 		clusterContext = new AstyanaxContext.Builder().forCluster(clusterName).withAstyanaxConfiguration(
 				new AstyanaxConfigurationImpl()).withConnectionPoolConfiguration(new ConnectionPoolConfigurationImpl(
-				clusterName).setMaxConnsPerHost(1).setSeeds(getListOfNodesAndPorts(locationURLs, ports)).setPort(
-				Integer.parseInt(ports))).withConnectionPoolMonitor(new CountingConnectionPoolMonitor()).buildCluster(
-				ThriftFamilyFactory.getInstance());
+						clusterName).setMaxConnsPerHost(1).setSeeds(getListOfNodesAndPorts(locationURLs, ports)).setPort(
+								Integer.parseInt(ports))).withConnectionPoolMonitor(new CountingConnectionPoolMonitor()).buildCluster(
+										ThriftFamilyFactory.getInstance());
 
 		clusterContext.start();
 		return clusterContext;
@@ -241,7 +267,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 
 				clusterContext.getEntity().addColumnFamily(
 						clusterContext.getEntity().makeColumnFamilyDefinition().setName(columnFamilyName)
-									  .setComparatorType("UTF8Type").setKeyValidationClass("UTF8Type"));
+						.setComparatorType("UTF8Type").setKeyValidationClass("UTF8Type"));
 				Thread.sleep(2000);
 
 			}
@@ -308,7 +334,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 			// column name then we need to set that timestamp to proper system timestamp.
 			if (timestampsDefined) {
 				columnListMutation.setTimestamp(timestamps.get(columnName) == null || timestamps.get(columnName) < 1 ?
-														clock.getCurrentTime() : timestamps.get(columnName));
+						clock.getCurrentTime() : timestamps.get(columnName));
 			}
 			columnListMutation.putColumn(columnName, valueToInsert, ttl);
 
@@ -322,13 +348,13 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 			if (!secondaryIndexMutation.isEmpty()) {
 				final OperationResult<Void> secondaryIndexMutationExecResult = secondaryIndexMutation.execute();
 				log.debug("Row Inserted into Cassandra secondary indexes. Exec Time = " +
-								  secondaryIndexMutationExecResult.getLatency() + ", " +
-								  "Host used = " + secondaryIndexMutationExecResult.getHost().getHostName());
+						secondaryIndexMutationExecResult.getLatency() + ", " +
+						"Host used = " + secondaryIndexMutationExecResult.getHost().getHostName());
 			}
 
 			OperationResult<Void> result = m.execute();
 			log.debug("Row Inserted into Cassandra. Exec Time = " + result.getLatency() + ", Host used = " +
-							  result.getHost().getHostName());
+					result.getHost().getHostName());
 		} catch (ConnectionException e) {
 			log.error(ExceptionUtils.getFullStackTrace(e));
 		}
@@ -348,7 +374,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		} catch (ConnectionException e) {
 			if (log.isDebugEnabled()) {
 				log.debug("HecubaClientManager error while reading key " + key.toString() + ". " +
-								  ExceptionUtils.getStackTrace(e));
+						ExceptionUtils.getStackTrace(e));
 			}
 		}
 		return null;
@@ -358,7 +384,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 	public CassandraColumn readColumnInfo(K key, String columnName) {
 		Column<String> columnByName = readColumn(key, columnName);
 		return columnByName == null ? null : new CassandraColumn(columnByName.getName(), columnByName.getStringValue(),
-																 columnByName.getTimestamp(), columnByName.getTtl());
+				columnByName.getTimestamp(), columnByName.getTtl());
 	}
 
 	public CassandraResultSet<K, String> readAllColumns(K key) throws ConnectionException {
@@ -368,7 +394,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 			ColumnList<String> columns = result.getResult();
 			if (isClientAdapterDebugMessagesEnabled) {
 				log.info("Row retrieved from Cassandra. Exec Time (micro-sec) = " + result.getLatency() / 1000 +
-								 ", Host used = " + result.getHost() + ", Key = " + key);
+						", Host used = " + result.getHost() + ", Key = " + key);
 			}
 			return new AstyanaxResultSet<K, String>(columns);
 
@@ -384,8 +410,8 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 	public CassandraResultSet<K, String> readColumnSlice(K key, String start, String end, boolean reversed, int count) {
 		try {
 			final OperationResult<ColumnList<String>> executeResult = keyspace.prepareQuery(columnFamily).getKey(key)
-																			  .withColumnRange(start, end, reversed,
-																							   count).execute();
+					.withColumnRange(start, end, reversed,
+							count).execute();
 			if (executeResult != null) {
 				return new AstyanaxResultSet<K, String>(executeResult.getResult());
 			}
@@ -402,7 +428,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		List<PreparedIndexExpression<K, String>> clauses = new ArrayList<PreparedIndexExpression<K, String>>();
 		for (Map.Entry<String, String> entry : parameters.entrySet()) {
 			PreparedIndexExpression<K, String> clause = columnFamily.newIndexClause().whereColumn(entry.getKey())
-																	.equals().value(entry.getValue());
+					.equals().value(entry.getValue());
 			clauses.add(clause);
 		}
 		OperationResult<Rows<K, String>> result;
@@ -451,7 +477,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		} catch (ConnectionException e) {
 			if (log.isDebugEnabled()) {
 				log.debug("HecubaClientManager error while reading key " + key.toString() + ". " +
-								  ExceptionUtils.getStackTrace(e));
+						ExceptionUtils.getStackTrace(e));
 				log.debug("Caught Exception", e);
 			}
 		}
@@ -464,7 +490,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 
 		try {
 			keyspace.prepareColumnMutation(columnFamily, key, counterColumnName).incrementCounterColumn(value)
-					.execute();
+			.execute();
 
 		} catch (ConnectionException e) {
 			log.error(ExceptionUtils.getStackTrace(e));
@@ -490,7 +516,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 			final Column<String> oldColumn = readColumn(key, columnName);
 			if (oldColumn != null) {
 				m.withRow(secondaryIndexColumnFamily, getSecondaryIndexKey(columnName, oldColumn.getStringValue()))
-				 .deleteColumn(key);
+				.deleteColumn(key);
 			}
 		}
 
@@ -574,73 +600,31 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 
 	private CassandraResultSet<K, String> retrieveFromSecondaryIndex(String columnName, String columnValue) {
 		try {
-			String secondaryIndexKey = getSecondaryIndexKey(columnName, columnValue);
-			final OperationResult<ColumnList<K>> result = keyspace.prepareQuery(secondaryIndexColumnFamily).getKey(
-					secondaryIndexKey).execute();
-			if (isClientAdapterDebugMessagesEnabled) {
-				log.debug("Secondary Index Row for " + secondaryIndexKey + " retrieved from Cassandra. Exec Time =" +
-								  " " +
-								  result.getLatency() + ", Host used = " + result.getHost().getHostName());
-			}
-
-			if (result != null && result.getResult().size() > 0) {
-				final Iterator<Column<K>> iterator = result.getResult().iterator();
-				Set<K> rowKeys = new HashSet<K>();
-				while (iterator.hasNext()) {
-					rowKeys.add(iterator.next().getName());
-				}
-				return readAllColumns(rowKeys);
+			List<K> mappingObjectIds = retrieveKeysFromSecondaryIndex(columnName, columnValue);
+			if (CollectionUtils.isNotEmpty(mappingObjectIds)) {
+				return readAllColumns(new HashSet<K>(mappingObjectIds));
 			}
 
 		} catch (Exception e) {
-			e.printStackTrace();
 			log.warn("Error executing retrieveBySecondaryIndex ", e);
 		}
 
 		return null;
 	}
 
-	private List<String> getSecondaryIndexKeys(String columnName, List<String> columnValues) {
-		List<String> secondaryIndexKeys = null;
-		if (columnValues != null && columnValues.size() > 0) {
-			secondaryIndexKeys = new ArrayList<>();
-			for (String columnValue : columnValues) {
-				secondaryIndexKeys.add(getSecondaryIndexKey(columnName, columnValue));
-			}
-		}
-
-		return secondaryIndexKeys;
-	}
-
 	private CassandraResultSet<K, String> retrieveFromSecondaryIndex(String columnName, List<String> columnValues) {
 		try {
-			List<String> secondaryIndexKeys = getSecondaryIndexKeys(columnName, columnValues);
-			OperationResult<Rows<String, K>> result = keyspace.prepareQuery(secondaryIndexColumnFamily).getKeySlice(
-					secondaryIndexKeys).execute();
-			if (isClientAdapterDebugMessagesEnabled) {
-				log.debug("Secondary Index Row for " + Joiner.on(",").join(secondaryIndexKeys) +
-								  " retrieved from Cassandra. Exec" +
-								  " " +
-								  "Time =" +
-								  " " +
-								  result.getLatency() + ", Host used = " + result.getHost().getHostName());
-			}
+			Map<String, List<K>> keysMap = retrieveKeysFromSecondaryIndex(columnName, columnValues);
 
-			if (result != null && result.getResult().size() > 0) {
-				Iterator<Row<String, K>> iterator = result.getResult().iterator();
-				Set<K> rowKeys = new HashSet<K>();
-				while (iterator.hasNext()) {
-					Iterator<Column<K>> columnIterator = iterator.next().getColumns().iterator();
-					while (columnIterator.hasNext()) {
-						rowKeys.add(columnIterator.next().getName());
-					}
+			if (MapUtils.isNotEmpty(keysMap)) {
+				Set<K> keys = new HashSet<>();
+				for (List<K> keysForColValue : keysMap.values()) {
+					keys.addAll(keysForColValue);
 				}
-				return readAllColumns(rowKeys);
+				return readAllColumns(keys);
 			}
-
 		} catch (Exception e) {
-			e.printStackTrace();
-			log.warn("Error executing retrieveBySecondaryIndex ", e);
+			log.warn("Error executing retrieveBySecondaryIndex for multiple column values", e);
 		}
 
 		return null;
@@ -671,10 +655,10 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 			if (columnFamilies != null) {
 				for (ColumnFamilyInfo columnFamilyInfo : columnFamilies) {
 					ksDef.addColumnFamily(cluster.makeColumnFamilyDefinition().setName(columnFamilyInfo.getName())
-												 .setComparatorType(columnFamilyInfo.getComparatorType())
-												 .setKeyValidationClass(columnFamilyInfo.getKeyValidationClass())
-												 .setDefaultValidationClass(
-														 columnFamilyInfo.getDefaultValidationClass()));
+							.setComparatorType(columnFamilyInfo.getComparatorType())
+							.setKeyValidationClass(columnFamilyInfo.getKeyValidationClass())
+							.setDefaultValidationClass(
+									columnFamilyInfo.getDefaultValidationClass()));
 				}
 			}
 
@@ -685,11 +669,9 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 			initialize(clusterName, locationURLs, ports, keyspace);
 
 		} catch (ConnectionException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error("Error creating keyspace and CFs, " + keyspace + ", " + columnFamilies, e);
 		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.error("Thread interrupted while creating keyspace and CFs, " + keyspace + ", " + columnFamilies, e);
 		} finally {
 			clusterContext.shutdown();
 		}
@@ -699,7 +681,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 	@Override
 	public CassandraResultSet<K, String> readColumns(K key, List<String> columnName) throws Exception {
 		final OperationResult<ColumnList<String>> operationResult = keyspace.prepareQuery(columnFamily).getKey(key)
-																			.withColumnSlice(columnName).execute();
+				.withColumnSlice(columnName).execute();
 		if (operationResult != null) {
 			return new AstyanaxResultSet<K, String>(operationResult.getResult());
 		}
@@ -712,11 +694,11 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 	public CassandraResultSet<K, String> readColumns(Set<K> keys, List<String> columnNames) throws Exception {
 		if (CollectionUtils.isNotEmpty(columnNames)) {
 			final OperationResult<Rows<K, String>> result = keyspace.prepareQuery(columnFamily).getKeySlice(keys)
-																	.withColumnSlice(columnNames).execute();
+					.withColumnSlice(columnNames).execute();
 			if (isClientAdapterDebugMessagesEnabled) {
 				log.info(columnNames.size() + " columns retrieved from Cassandra [Astyanax] for " + keys.size() +
-								 " keys . Exec Time (micro-sec) = " + (result.getLatency() / 1000) + ", Host used = " +
-								 result.getHost());
+						" keys . Exec Time (micro-sec) = " + (result.getLatency() / 1000) + ", Host used = " +
+						result.getHost());
 			}
 			return new AstyanaxResultSet<K, String>(result);
 		} else {
@@ -732,16 +714,17 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 			OperationResult<Rows<K, String>> result = keyspace.prepareQuery(columnFamily).getKeySlice(keys).execute();
 			if (isClientAdapterDebugMessagesEnabled) {
 				log.info("Rows retrieved from Cassandra [Astyanax] (for " + keys.size() + " keys). Exec Time " +
-								 "(micro-sec) = " + result.getLatency() / 1000 + ", Host used = " + result.getHost());
+						"(micro-sec) = " + result.getLatency() / 1000 + ", Host used = " + result.getHost());
 			}
 
 			return new AstyanaxResultSet<K, String>(result);
 
 		} catch (ConnectionException e) {
 			log.warn("HecubaClientManager [Astyanax] error while reading multiple keys. Number of keys = " +
-							 keys.size() + ", keys = " + keys.toString());
+					keys.size() + ", keys = " + keys.toString());
 			if (log.isDebugEnabled()) {
 				log.debug("Caught Exception while reading for multiple keys", e);
+				logDownedHosts();
 			}
 			throw e;
 		}
@@ -749,14 +732,17 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 
 	@Override
 	public CassandraResultSet<K, String> readColumnSlice(Set<K> keys, String start, String end, boolean reversed,
-														 int count) {
+			int count) {
 		try {
 			final OperationResult<Rows<K, String>> rowSliceQueryResult = keyspace.prepareQuery(columnFamily)
-																				 .getKeySlice(keys).withColumnRange(
+					.getKeySlice(keys).withColumnRange(
 							start, end, reversed, count).execute();
 			return new AstyanaxResultSet<K, String>(rowSliceQueryResult);
 		} catch (ConnectionException e) {
 			log.warn("error while executing a row slice query ", e);
+			if (log.isDebugEnabled()) {
+				logDownedHosts();
+			}
 		}
 
 		return null;
@@ -768,6 +754,126 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 			deleteColumn(key, columnName);
 		}
 
+	}
+
+	@Override
+	public List<K> retrieveKeysBySecondaryIndex(String columnName, String columnValue) {
+		if (isSecondaryIndexByColumnNameAndValueEnabledForColumn(columnName)) {
+			return retrieveKeysFromSecondaryIndex(columnName, columnValue);
+		}
+
+		return null;
+	}
+
+	@Override
+	public Map<String, List<K>> retrieveKeysBySecondaryIndex(String columnName, List<String> columnValues) {
+		if (isSecondaryIndexByColumnNameAndValueEnabledForColumn(columnName)) {
+			return retrieveKeysFromSecondaryIndex(columnName, columnValues);
+		}
+
+		return null;
+	}
+
+	@Override
+	public List<K> retrieveKeysByColumnNameBasedSecondaryIndex(String columnName) {
+		if (isSecondaryIndexByColumnNameEnabledForColumn(columnName)) {
+			return retrieveKeysFromSecondaryIndex(columnName, "");
+		}
+
+		return null;
+	}
+
+	private List<K> retrieveKeysFromSecondaryIndex(String columnName, String columnValue) {
+		try {
+			String secondaryIndexKey = getSecondaryIndexKey(columnName, columnValue);
+			final OperationResult<ColumnList<K>> result = keyspace.prepareQuery(secondaryIndexColumnFamily).getKey(
+					secondaryIndexKey).execute();
+			if (isClientAdapterDebugMessagesEnabled) {
+				log.debug("Secondary Index Row for " + secondaryIndexKey + " retrieved from Cassandra. Exec Time = " +
+						result.getLatency() + ", Host used = " + result.getHost().getHostName());
+			}
+
+			if (result != null && result.getResult().size() > 0) {
+				final Iterator<Column<K>> iterator = result.getResult().iterator();
+				List<K> rowKeys = new ArrayList<K>();
+				while (iterator.hasNext()) {
+					rowKeys.add(iterator.next().getName());
+				}
+				return rowKeys;
+			}
+
+		} catch (Exception e) {
+			log.warn("Error executing retrieveKeysFromSecondaryIndex ", e);
+			if (log.isDebugEnabled()) {
+				logDownedHosts();
+			}
+		}
+
+		return null;
+	}
+
+	private Map<String, List<K>> retrieveKeysFromSecondaryIndex(String columnName, List<String> columnValues) {
+		try {
+			List<String> secondaryIndexKeys = getSecondaryIndexKeys(columnName, columnValues);
+			OperationResult<Rows<String, K>> result = keyspace.prepareQuery(secondaryIndexColumnFamily).getKeySlice(
+					secondaryIndexKeys).execute();
+			if (isClientAdapterDebugMessagesEnabled) {
+				log.debug("Secondary Index Row for " + Joiner.on(",").join(secondaryIndexKeys) +
+						" retrieved from Cassandra. Exec Time = " +
+						result.getLatency() + ", Host used = " + result.getHost().getHostName());
+			}
+
+			if (result != null && result.getResult().size() > 0) {
+				Map<String, List<K>> rowKeysMap = new HashMap<>();
+				Iterator<Row<String, K>> rowIterator = result.getResult().iterator();
+				while (rowIterator.hasNext()) {
+					Row<String, K> row = rowIterator.next();
+					Iterator<Column<K>> columnIterator = row.getColumns().iterator();
+					List<K> keys = new ArrayList<>();
+					while (columnIterator.hasNext()) {
+						keys.add(columnIterator.next().getName());
+					}
+					if (CollectionUtils.isNotEmpty(keys)) {
+						rowKeysMap.put(getSecondaryIndexedColumnValue(row.getKey()), keys);
+					}
+				}
+				return rowKeysMap;
+			}
+
+		} catch (Exception e) {
+			log.warn("Error executing retrieveKeysFromSecondaryIndex for multiple column values", e);
+			if (log.isDebugEnabled()) {
+				logDownedHosts();
+			}
+		}
+
+		return null;
+	}
+
+	@Override
+	protected void logDownedHosts() {
+		Map<Host, HostStats> hostStatsMap = connectionPoolMonitor.getHostStats();
+		StringBuilder allHostsSB = new StringBuilder("All Hosts = {");
+		StringBuilder downedHostsSB = new StringBuilder("Downed Hosts = {");
+
+		for (Host host : hostStatsMap.keySet()) {
+			allHostsSB.append(host.getHostName() + ", ");
+			HostStats stats = hostStatsMap.get(host);
+			if (stats != null && !stats.isUp()) {
+				downedHostsSB.append(host.getHostName() + ", ");
+			}
+		}
+		if (allHostsSB.toString().endsWith(", ")) {
+			allHostsSB.setLength(allHostsSB.length() - 2);
+		}
+		allHostsSB.append("}");
+		log.debug(allHostsSB.toString());
+
+		if (downedHostsSB.toString().endsWith(", ")) {
+			downedHostsSB.setLength(downedHostsSB.length() - 2);
+		}
+		downedHostsSB.append("}");
+		log.debug(downedHostsSB.toString());
 	}
 
 }

@@ -69,7 +69,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		assertEquals(keyspace, cassandraManager.getKeyspace());
 		assertEquals(cf, cassandraManager.getColumnFamilyName());
 		assertTrue(ListUtils.removeAll(Arrays.asList(secondaryIndexColumns.split(":")),
-									   cassandraManager.getColumnsToIndexOnColumnNameAndValue()).size() == 0);
+				cassandraManager.getColumnsToIndexOnColumnNameAndValue()).size() == 0);
 
 	}
 
@@ -113,7 +113,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 		// try to retrieve data by secondaryIndex value.
 		CassandraResultSet<Long, String> results = cassandraManager.retrieveBySecondaryIndex("MySecondaryKey_1",
-																							 "MySecondaryKey_1_value_1");
+				"MySecondaryKey_1_value_1");
 		int count = 1;
 		while (results.hasNextResult()) {
 			results.nextResult();
@@ -396,13 +396,13 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		assertEquals(null, resultFromFifthRetrieval);
 
 		resultFromFifthRetrieval = cassandraManager.retrieveBySecondaryIndex("MySecondaryKey_1",
-																			 "MySecondaryKey_1_value_2");
+				"MySecondaryKey_1_value_2");
 
 		//   1. we should have retrieved one
 		assertEquals(false, resultFromFifthRetrieval.hasNextResult());
 
 		resultFromFifthRetrieval = cassandraManager.retrieveBySecondaryIndex("MySecondaryKey_1",
-																			 "MySecondaryKey_1_value_3");
+				"MySecondaryKey_1_value_3");
 
 		//   1. we should have retrieved one
 		assertEquals(false, resultFromFifthRetrieval.hasNextResult());
@@ -1135,7 +1135,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 	}
 
 	private <K, N> void assertCassandraResultSet(CassandraResultSet<K, N> result, Map<K, Map<N, Object>> dataSet,
-												 Set<K> fetchedKeys, List<N> fetchedColumns) {
+			Set<K> fetchedKeys, List<N> fetchedColumns) {
 		assertNotNull(result);
 		assertTrue(result.hasResults());
 		assertFalse(CollectionUtils.isEmpty(result.getColumnNames()));
@@ -1164,7 +1164,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 			result.nextResult();
 		}
 		assertEquals(fetchedKeys.size(),
-					 count); // Asserts the result set contains exactly same number of rows as is the fetchedKeys size
+				count); // Asserts the result set contains exactly same number of rows as is the fetchedKeys size
 		assertEquals(0, keysCopy.size()); // Asserts we get all the keys in the result set
 	}
 
@@ -1302,13 +1302,13 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		assertEquals(null, resultFromFifthRetrieval);
 
 		resultFromFifthRetrieval = cassandraManager.retrieveBySecondaryIndex("MySecondaryKey_1",
-																			 "SecondaryIndexValue_2");
+				"SecondaryIndexValue_2");
 
 		//   1. we should have retrieved one
 		assertEquals(false, resultFromFifthRetrieval.hasNextResult());
 
 		resultFromFifthRetrieval = cassandraManager.retrieveBySecondaryIndex("MySecondaryKey_1",
-																			 "SecondaryIndexValue_3");
+				"SecondaryIndexValue_3");
 
 		//   1. we should have retrieved one
 		assertEquals(false, resultFromFifthRetrieval.hasNextResult());
@@ -1358,7 +1358,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		cassandraManager.updateDate(1234L, "test_column_1", date);
 		Date actualDate = cassandraManager.readDate(1234L, "test_column_1");
 		assertEquals(HecubaConstants.DATE_FORMATTER.print(date.getTime()),
-					 HecubaConstants.DATE_FORMATTER.print(actualDate.getTime()));
+				HecubaConstants.DATE_FORMATTER.print(actualDate.getTime()));
 	}
 
 	@Test
@@ -1425,8 +1425,8 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		assertEquals("Nextag", cassandraManager.readString(12312L, "test_column_3"));
 		assertEquals(new Double(12112.121), cassandraManager.readDouble(12312L, "test_column_4"));
 		assertEquals(HecubaConstants.DATE_FORMATTER.print(currentDate.getTime()),
-					 HecubaConstants.DATE_FORMATTER.print(cassandraManager.readDate(12312L, "test_column_5")
-																				   .getTime()));
+				HecubaConstants.DATE_FORMATTER.print(cassandraManager.readDate(12312L, "test_column_5")
+						.getTime()));
 
 		// Now lets update certain columns and test it.
 		columnValues = new HashMap<String, Object>();
@@ -1473,8 +1473,8 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		assertEquals("Nextag", cassandraManager.readString(12312L, "test_column_3"));
 		assertEquals(new Double(12112.121), cassandraManager.readDouble(12312L, "test_column_4"));
 		assertEquals(HecubaConstants.DATE_FORMATTER.print(currentDate.getTime()),
-					 HecubaConstants.DATE_FORMATTER.print(cassandraManager.readDate(12312L, "test_column_5")
-																				   .getTime()));
+				HecubaConstants.DATE_FORMATTER.print(cassandraManager.readDate(12312L, "test_column_5")
+						.getTime()));
 
 		// Now lets remove the entire row.
 		cassandraManager.deleteRow(12312L);
@@ -1649,15 +1649,15 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 			final boolean timeStampAvailable = timestamps != null && timestamps.get(columnName) != null &&
 					timestamps.get(columnName) > 0;
-			final long expected = timeStampAvailable ? timestamps.get(columnName) : System.currentTimeMillis();
-			final long actual = timeStampAvailable ? testColumn.getTimestamp() : convertToJavaTimestamp(
-					testColumn.getTimestamp());
-			compareDates(expected, actual);
+					final long expected = timeStampAvailable ? timestamps.get(columnName) : System.currentTimeMillis();
+					final long actual = timeStampAvailable ? testColumn.getTimestamp() : convertToJavaTimestamp(
+							testColumn.getTimestamp());
+					compareDates(expected, actual);
 
 
-			final boolean ttlAvailable = ttls != null && ttls.get(columnName) != null && ttls.get(columnName) > 0;
-			assertEquals(ttlAvailable ? ttls.get(columnName) : 0, testColumn.getTtl());
-			assertEquals(columns.get(columnName), testColumn.getValue());
+					final boolean ttlAvailable = ttls != null && ttls.get(columnName) != null && ttls.get(columnName) > 0;
+					assertEquals(ttlAvailable ? ttls.get(columnName) : 0, testColumn.getTtl());
+					assertEquals(columns.get(columnName), testColumn.getValue());
 		}
 	}
 
@@ -1732,6 +1732,68 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 	}
 
 	/**
+	 * test retrieval of only keys using secondary index
+	 */
+	@Test
+	public void testRetrieveSecondaryIdxKeys() {
+		String columnFamily = "testRetrieveSecondaryIdxKeys";
+
+		CassandraParamsBean bean = new CassandraParamsBean();
+		bean.setClustername(CLUSTER_NAME);
+		bean.setLocationURLs(LOCATION);
+		bean.setThriftPorts(PORT);
+		bean.setKeyspace(KEYSPACE);
+		bean.setCf(columnFamily);
+		bean.setSiColumns("MySecondaryKey");
+
+		// retrieve the cassandra manager.
+		HecubaClientManager<Long> cassandraManager = getHecubaClientManager(bean);
+
+		// insert the record 1234L with columns having secondary indices.
+		HashMap<String, Object> row = new HashMap<>();
+		row.put("column_1", "value_11");
+		row.put("column_2", "value_12");
+		row.put("MySecondaryKey", "MySecondaryValue");
+		cassandraManager.updateRow(1234L, row);
+
+		row = new HashMap<>();
+		row.put("column_1", "value_21");
+		row.put("column_2", "value_22");
+		row.put("MySecondaryKey", "MySecondaryValue");
+		cassandraManager.updateRow(2345L, row);
+
+		row = new HashMap<>();
+		row.put("column_1", "value_31");
+		row.put("column_2", "value_32");
+		row.put("MySecondaryKey", "MySecondaryValue3");
+		cassandraManager.updateRow(3456L, row);
+
+		// now lets only keys using secondary index
+		final List<Long> keys = cassandraManager.retrieveKeysBySecondaryIndex("MySecondaryKey", "MySecondaryValue");
+		assertNotNull(keys);
+		assertEquals(2, keys.size());
+		assertEquals(new Long(1234L), keys.get(0));
+		assertEquals(new Long(2345L), keys.get(1));
+
+		// now retrieve keys for 2 columnValues (multi-get)
+		List<String> siColumnValues = new ArrayList<>();
+		siColumnValues.add("MySecondaryValue");
+		siColumnValues.add("MySecondaryValue3");
+		final Map<String, List<Long>> keysMap = cassandraManager.retrieveKeysBySecondaryIndex("MySecondaryKey", siColumnValues);
+		assertNotNull(keysMap);
+		assertEquals(2, keys.size());
+		
+		assertNotNull(keysMap.get("MySecondaryValue"));
+		assertEquals(2, keysMap.get("MySecondaryValue").size());
+		assertEquals(new Long(1234L), keysMap.get("MySecondaryValue").get(0));
+		assertEquals(new Long(2345L), keysMap.get("MySecondaryValue").get(1));
+		
+		assertNotNull(keysMap.get("MySecondaryValue3"));
+		assertEquals(1, keysMap.get("MySecondaryValue3").size());
+		assertEquals(new Long(3456L), keysMap.get("MySecondaryValue3").get(0));
+	}
+
+	/**
 	 * test update of Row which contains column with TTL and that column is also a secondary index.
 	 */
 	@Test
@@ -1766,13 +1828,13 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		
+
 		// now lets see whether we can retrieve this item by the secondary indices.
 		// Since MySecondaryKey_1 column is expired, it's secondary index should also expire
 		final CassandraResultSet<Long, String> resultSetRetrievedUsingSecondaryIdx1 =
 				cassandraManager.retrieveBySecondaryIndex("MySecondaryKey_1", "MySecondaryKey_1_value_1");
 		assertNull(resultSetRetrievedUsingSecondaryIdx1);
-		
+
 		// We should be able to retrieve using secondary index on MySecondaryKey_2
 		final CassandraResultSet<Long, String> resultSetRetrievedUsingSecondaryIdx2 =
 				cassandraManager.retrieveBySecondaryIndex("MySecondaryKey_2", "MySecondaryKey_2_value_2");
@@ -1783,8 +1845,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 			assertEquals(row.get(columnName), resultSetRetrievedUsingSecondaryIdx2.getString(columnName));
 		}
 	}
-	
-	
+
 	@Test
 	public void outOfOrderDeleteTest() throws Exception {
 		final long SECOND_KEY = 112233L;
@@ -1868,7 +1929,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 		// try to retrieve data by secondaryIndex value.
 		CassandraResultSet<Long, String> results = cassandraManager.retrieveBySecondaryIndex("MySecondaryKey_1",
-																							 expectedSecondaryIndexValues);
+				expectedSecondaryIndexValues);
 		assertNotNull(results);
 
 		int count = 1;
@@ -1891,8 +1952,6 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 			key = results.getKey();
 			assertTrue((key % 5) == 1 || (key % 5) == 2);
 		}
-
-
 	}
 
 	@Override
