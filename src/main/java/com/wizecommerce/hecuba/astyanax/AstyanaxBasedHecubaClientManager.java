@@ -849,13 +849,13 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 
 		return null;
 	}
-	
+
 	@Override
 	protected void logDownedHosts() {
 		Map<Host, HostStats> hostStatsMap = connectionPoolMonitor.getHostStats();
 		StringBuilder allHostsSB = new StringBuilder("All Hosts = {");
 		StringBuilder downedHostsSB = new StringBuilder("Downed Hosts = {");
-		
+
 		for (Host host : hostStatsMap.keySet()) {
 			allHostsSB.append(host.getHostName() + ", ");
 			HostStats stats = hostStatsMap.get(host);
@@ -868,7 +868,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		}
 		allHostsSB.append("}");
 		log.debug(allHostsSB.toString());
-		
+
 		if (downedHostsSB.toString().endsWith(", ")) {
 			downedHostsSB.setLength(downedHostsSB.length() - 2);
 		}

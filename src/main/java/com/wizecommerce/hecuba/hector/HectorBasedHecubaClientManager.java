@@ -1172,5 +1172,4 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 		downedHostsSB.append("}");
 		log.debug(downedHostsSB.toString());
 	}
-
 }
