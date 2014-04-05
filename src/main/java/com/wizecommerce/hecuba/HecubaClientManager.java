@@ -692,20 +692,29 @@ public abstract class HecubaClientManager<K> {
 	// ====================================================
 	// Utils
 	// ====================================================
+
+	/**
+	 * Takes a list of column delimited urls, and a list of column delimited port numbers.
+	 * If will match the pairs of port to hostnames.  If the number don't match, then we will
+	 * backfill with the last valid port number.
+	 * @param locationURLs
+	 * @param ports
+	 * @return
+	 */
 	protected String getListOfNodesAndPorts(String locationURLs, String ports) {
 		final String paramSeparator = ConfigUtils.getInstance().getConfiguration().getString(
 				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + ".hecuba.path.separator", ":");
 		final String[] splittedPorts = ports.split(paramSeparator);
 		final String[] splittedLocationURLs = locationURLs.split(paramSeparator);
 		final StringBuffer listOfNodesAndPortsBuffer = new StringBuffer();
+		String port = "";
 		for (int index = 0; index < splittedLocationURLs.length; index++) {
 			final String locationURL = splittedLocationURLs[index];
-			String port = "";
 			if (index < splittedPorts.length) {
 				port = splittedPorts[index];
 			}
 
-			if (port == null || "".equals(port)) {
+			if (StringUtils.isEmpty(port)) {
 				port = "9160";
 			}
 			listOfNodesAndPortsBuffer.append(locationURL).append(":").append(port).append(",");
