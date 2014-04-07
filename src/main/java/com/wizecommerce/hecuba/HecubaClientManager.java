@@ -658,7 +658,7 @@ public abstract class HecubaClientManager<K> {
 	 * Furthermore, after retrieving keys, client can retrieve only specific columns using {@link HecubaClientManager#readColumns(Object, List)}
 	 * <p/>
 	 * {@link HecubaClientManager#retrieveBySecondaryIndex(String, String)} returns {@link CassandraResultSet} by reading allColumns
-	 * 
+	 *
 	 * @param columnName - Cassandra column name which is secondary indexed
 	 * @param columnValue - Cassandra column value which is secondary indexed
 	 * @return ordered list of keys
@@ -692,20 +692,29 @@ public abstract class HecubaClientManager<K> {
 	// ====================================================
 	// Utils
 	// ====================================================
+
+	/**
+	 * Takes a list of comma delimited urls, and a list of comma delimited port numbers.
+	 * It will match the pairs of port to hostnames.  If the counts don't match, then it will
+	 * backfill with the last valid port number.
+	 * @param locationURLs
+	 * @param ports
+	 * @return
+	 */
 	protected String getListOfNodesAndPorts(String locationURLs, String ports) {
 		final String paramSeparator = ConfigUtils.getInstance().getConfiguration().getString(
 				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + ".hecuba.path.separator", ":");
 		final String[] splittedPorts = ports.split(paramSeparator);
 		final String[] splittedLocationURLs = locationURLs.split(paramSeparator);
 		final StringBuffer listOfNodesAndPortsBuffer = new StringBuffer();
+		String port = "";
 		for (int index = 0; index < splittedLocationURLs.length; index++) {
 			final String locationURL = splittedLocationURLs[index];
-			String port = "";
 			if (index < splittedPorts.length) {
 				port = splittedPorts[index];
 			}
 
-			if (port == null || "".equals(port)) {
+			if (StringUtils.isEmpty(port)) {
 				port = "9160";
 			}
 			listOfNodesAndPortsBuffer.append(locationURL).append(":").append(port).append(",");
@@ -810,6 +819,6 @@ public abstract class HecubaClientManager<K> {
 		return isSecondaryIndexByColumnNameAndValueEnabled && Collections.binarySearch(
 				columnsToIndexOnColumnNameAndValue, columnName) >= 0;
 	}
-	
+
 	protected abstract void logDownedHosts();
 }
