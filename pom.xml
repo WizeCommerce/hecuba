@@ -4,7 +4,7 @@
 	<groupId>com.wizecommerce</groupId>
 	<artifactId>hecuba-client</artifactId>
 	<packaging>jar</packaging>
-	<version>0.0.50-SNAPSHOT</version>
+	<version>0.0.50</version>
 	<name>Hecuba</name>
 	<description>An abstraction over available Apache Cassandra clients</description>
 	<url>http://github.com/WizeCommerce/hecuba</url>
