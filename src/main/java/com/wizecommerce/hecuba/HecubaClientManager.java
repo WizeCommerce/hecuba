@@ -308,7 +308,7 @@ public abstract class HecubaClientManager<K> {
 	 * @param key - key of the column to be updated.
 	 * @param row - a map of columnNames and their respected values to be updated.
 	 */
-	public void updateRow(K key, Map<String, Object> row) {
+	public void updateRow(K key, Map<String, Object> row) throws Exception {
 		updateRow(key, row, null, null);
 	}
 
@@ -326,7 +326,7 @@ public abstract class HecubaClientManager<K> {
 	 * @param ttls       - a map of column names to their ttls. Defaults to not expire.
 	 */
 	public abstract void updateRow(K key, Map<String, Object> row, Map<String, Long> timestamps,
-			Map<String, Integer> ttls);
+			Map<String, Integer> ttls) throws Exception;
 
 	/**
 	 * Reads the value of a column related to a given key.

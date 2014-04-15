@@ -338,7 +338,7 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 	}
 
 	@Override
-	public void updateRow(K key, Map<String, Object> row, Map<String, Long> timestamps, Map<String, Integer> ttls) {
+	public void updateRow(K key, Map<String, Object> row, Map<String, Long> timestamps, Map<String, Integer> ttls) throws HectorException {
 		final Mutator<K> m = HFactory.createMutator(keysp, keySerializer);
 
 		List<String> secondaryColumnsChanged = null;
@@ -418,10 +418,12 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 			final MutationResult mutationResult = m.execute();
 			log.debug("Row Inserted into Cassandra. Exec Time = " + mutationResult.getExecutionTimeMicro() +
 					", Host used = " + mutationResult.getHostUsed());
-
-
-		} catch (Exception e) {
-			e.printStackTrace();
+		} catch (HectorException e) {
+			log.debug("HecubaClientManager error while updating key " + key.toString());
+			if (log.isDebugEnabled()) {
+				logDownedHosts();
+			}
+			throw e;
 		}
 
 	}
