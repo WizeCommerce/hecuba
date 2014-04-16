@@ -15,10 +15,14 @@
 package com.wizecommerce.hecuba;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.lang.time.DateUtils;
+
 import com.wizecommerce.hecuba.util.CassandraTestBase;
+
 import org.junit.Test;
 
 import java.io.IOException;
@@ -1791,6 +1795,11 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		assertNotNull(keysMap.get("MySecondaryValue3"));
 		assertEquals(1, keysMap.get("MySecondaryValue3").size());
 		assertEquals(new Long(3456L), keysMap.get("MySecondaryValue3").get(0));
+		
+		List<String> allSecondaryKeys = cassandraManager.retrieveAllSecondaryKeys(Integer.MAX_VALUE);
+		assertEquals(2,allSecondaryKeys.size());
+		assertTrue(allSecondaryKeys.containsAll(Sets.newHashSet("MySecondaryKey:MySecondaryValue3","MySecondaryKey:MySecondaryValue")));
+		//logger.info(allSecondaryKeys);
 	}
 
 	/**
