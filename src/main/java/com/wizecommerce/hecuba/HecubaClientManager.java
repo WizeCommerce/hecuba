@@ -688,6 +688,17 @@ public abstract class HecubaClientManager<K> {
 	 * @return
 	 */
 	public abstract List<K> retrieveKeysByColumnNameBasedSecondaryIndex(String columnName);
+	
+	/**
+	 * Sometimes we need all secondary keys based on a particular column. Unfortunately there is no way to get a range of secondary keys
+	 * unless we use an ordered partitioner. This is an alternate API to get all secondary keys, filtering is left to the user.
+	 * <p/>
+	 * {@link HecubaClientManager#retrieveAllSecondaryKeys(int)} returns result by reading all secondary keys.
+	 * @param limit 
+	 * @return returns all keys or upto <b>limit</b> whichever is less.
+	 */
+	public abstract List<String> retrieveAllSecondaryKeys(int limit);
+
 
 	// ====================================================
 	// Utils

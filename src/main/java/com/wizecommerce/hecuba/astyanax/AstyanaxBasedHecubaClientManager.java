@@ -74,6 +74,7 @@ import com.netflix.astyanax.query.PreparedIndexExpression;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
+import com.netflix.astyanax.util.RangeBuilder;
 import com.wizecommerce.hecuba.CassandraColumn;
 import com.wizecommerce.hecuba.CassandraParamsBean;
 import com.wizecommerce.hecuba.CassandraResultSet;
@@ -851,6 +852,31 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 	}
 
 	@Override
+	public List<String> retrieveAllSecondaryKeys(int limit) {
+		List<String> retrievedKeys = new ArrayList<>();
+		if (limit <= 0) {
+			return retrievedKeys;
+		}
+		try {
+			Rows<String, K> rows = keyspace.prepareQuery(secondaryIndexColumnFamily).getAllRows().setRowLimit(limit)
+					.withColumnRange(new RangeBuilder().setLimit(0).build()) // No columns required, only keys
+					.execute().getResult();
+			for (Row<String, K> row : rows) {
+				retrievedKeys.add(row.getKey());
+				// if rows are accessed more than the limit set it throws TransportException exception
+				if (--limit <= 0) {
+					break;
+				}
+			}
+		} catch (Exception e) {
+			log.warn("Error executing retrieveAllSecondaryKeys ", e);
+			if (log.isDebugEnabled()) {
+				logDownedHosts();
+			}
+		}
+		return retrievedKeys;
+	}
+	@Override
 	protected void logDownedHosts() {
 		Map<Host, HostStats> hostStatsMap = connectionPoolMonitor.getHostStats();
 		StringBuilder allHostsSB = new StringBuilder("All Hosts = {");
@@ -875,5 +901,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		downedHostsSB.append("}");
 		log.debug(downedHostsSB.toString());
 	}
+
+	
 
 }

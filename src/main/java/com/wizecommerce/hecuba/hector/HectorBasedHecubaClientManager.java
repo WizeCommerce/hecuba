@@ -34,6 +34,7 @@ import me.prettyprint.cassandra.model.thrift.ThriftCounterColumnQuery;
 import me.prettyprint.cassandra.serializers.StringSerializer;
 import me.prettyprint.cassandra.service.CassandraHost;
 import me.prettyprint.cassandra.service.CassandraHostConfigurator;
+import me.prettyprint.cassandra.service.RangeSlicesIterator;
 import me.prettyprint.cassandra.service.ThriftKsDef;
 import me.prettyprint.cassandra.service.template.ColumnFamilyResult;
 import me.prettyprint.cassandra.service.template.ColumnFamilyTemplate;
@@ -47,6 +48,7 @@ import me.prettyprint.hector.api.beans.ColumnSlice;
 import me.prettyprint.hector.api.beans.HColumn;
 import me.prettyprint.hector.api.beans.HCounterColumn;
 import me.prettyprint.hector.api.beans.OrderedRows;
+import me.prettyprint.hector.api.beans.Row;
 import me.prettyprint.hector.api.beans.Rows;
 import me.prettyprint.hector.api.ddl.ColumnFamilyDefinition;
 import me.prettyprint.hector.api.ddl.KeyspaceDefinition;
@@ -57,6 +59,7 @@ import me.prettyprint.hector.api.mutation.Mutator;
 import me.prettyprint.hector.api.query.CounterQuery;
 import me.prettyprint.hector.api.query.MultigetSliceQuery;
 import me.prettyprint.hector.api.query.QueryResult;
+import me.prettyprint.hector.api.query.RangeSlicesQuery;
 import me.prettyprint.hector.api.query.SliceQuery;
 
 import org.apache.commons.collections.CollectionUtils;
@@ -1150,6 +1153,34 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 	}
 
 	@Override
+	public List<String> retrieveAllSecondaryKeys(int limit) {
+		List<String> retrievedKeys = new ArrayList<String>();
+		if (limit < 0) {
+			return retrievedKeys;
+		}
+		try {
+			if (isSecondaryIndexByColumnNameAndValueEnabled) {
+				
+				RangeSlicesQuery<String, K, K> rangeSlicesQuery = HFactory.createRangeSlicesQuery(keysp, StringSerializer.get(), keySerializer, keySerializer)
+						.setColumnFamily(secondaryIndexedColumnFamilyTemplate.getColumnFamily()).setRange(null, null, false, limit);
+				RangeSlicesIterator<String, K, K> rangeSlicesIterator = new RangeSlicesIterator<String, K, K>(rangeSlicesQuery, null, null);
+
+				while (rangeSlicesIterator.hasNext()) {
+					Row<String, K, K> row = rangeSlicesIterator.next();
+					retrievedKeys.add(row.getKey());
+				}
+			}
+		} catch (HectorException e) {
+			log.info("HecubaClientManager error while retrieving all " + secondaryIndexedColumnFamilyTemplate.getColumnFamily() + " keys. limit = " + limit);
+			if (log.isDebugEnabled()) {
+				log.debug("Caught Exception", e);
+			}
+			throw e;
+		}
+		return retrievedKeys;
+	}
+	
+	@Override
 	protected void logDownedHosts() {
 		HConnectionManager connectionManager = this.cluster.getConnectionManager();
 		StringBuilder allHostsSB = new StringBuilder("All Hosts = {");
@@ -1172,4 +1203,6 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 		downedHostsSB.append("}");
 		log.debug(downedHostsSB.toString());
 	}
+
+	
 }
