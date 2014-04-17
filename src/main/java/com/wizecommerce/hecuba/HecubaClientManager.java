@@ -698,6 +698,7 @@ public abstract class HecubaClientManager<K> {
 	 * @param limit 
 	 * @return returns all keys or upto <b>limit</b> whichever is less, 
 	 * 		   returns null if secondaryIndexColumn is not enabled on this column family.
+
 	 */
 	public abstract List<String> retrieveAllSecondaryKeys(int limit);
 
