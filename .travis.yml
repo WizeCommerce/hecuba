@@ -4,7 +4,7 @@ jdk:
   - oraclejdk7
   - openjdk7
 
-script: mvn package -Dmaven.compiler.target=1.7 -Dmaven.compiler.source=1.7
+script: mvn test -Dmaven.compiler.target=1.7 -Dmaven.compiler.source=1.7
 
 notifications:
   email:
