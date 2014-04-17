@@ -291,7 +291,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 	}
 
 	@Override
-	public void updateRow(K key, Map<String, Object> row, Map<String, Long> timestamps, Map<String, Integer> ttls) {
+	public void updateRow(K key, Map<String, Object> row, Map<String, Long> timestamps, Map<String, Integer> ttls) throws Exception {
 		// Inserting data
 		MutationBatch m = keyspace.prepareMutationBatch();
 
@@ -356,7 +356,10 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 			log.debug("Row Inserted into Cassandra. Exec Time = " + result.getLatency() + ", Host used = " +
 					result.getHost().getHostName());
 		} catch (ConnectionException e) {
-			log.error(ExceptionUtils.getFullStackTrace(e));
+			if (log.isDebugEnabled()) {
+				log.debug("HecubaClientManager error while updating key " + key.toString());
+			}
+			throw e;
 		}
 
 	}

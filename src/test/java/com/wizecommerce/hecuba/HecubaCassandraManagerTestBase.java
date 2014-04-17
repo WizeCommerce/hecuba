@@ -14,17 +14,32 @@
 
 package com.wizecommerce.hecuba;
 
-import com.google.common.collect.Lists;
+import static junit.framework.Assert.assertEquals;
+import static junit.framework.Assert.assertFalse;
+import static junit.framework.Assert.assertNotNull;
+import static junit.framework.Assert.assertNull;
+import static junit.framework.Assert.assertTrue;
+
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Random;
+import java.util.Set;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
 import org.apache.commons.lang.time.DateUtils;
-import com.wizecommerce.hecuba.util.CassandraTestBase;
 import org.junit.Test;
 
-import java.io.IOException;
-import java.util.*;
-
-import static junit.framework.Assert.*;
+import com.google.common.collect.Lists;
+import com.wizecommerce.hecuba.util.CassandraTestBase;
 
 public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
@@ -79,9 +94,10 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 	 */
 	/**
 	 * testSecondaryIndexWithMaxColumnsOverride
+	 * @throws Exception 
 	 */
 	@Test
-	public void testUpdateRowScenario16() {
+	public void testUpdateRowScenario16() throws Exception {
 		String columnFamily = "testUpdateRowScenario16";
 
 		final int maxResultSetSize = 120;
@@ -146,7 +162,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 	}
 
 	@Test
-	public void testSecondaryIndexWithDeletes() {
+	public void testSecondaryIndexWithDeletes() throws Exception {
 		String columnFamily = "testSecondaryIndexWithDeletes";
 
 		final int maxResultSetSize = 120;
@@ -234,9 +250,10 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * testSecondaryIndexWithUpdatesToMultipleColumns
+	 * @throws Exception 
 	 */
 	@Test
-	public void testUpdateRowScenario15() {
+	public void testUpdateRowScenario15() throws Exception {
 		String columnFamily = "testUpdateRowScenario15";
 
 		CassandraParamsBean bean = new CassandraParamsBean();
@@ -251,7 +268,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	}
 
-	public void runSecondaryIndexTests(CassandraParamsBean bean) {
+	public void runSecondaryIndexTests(CassandraParamsBean bean) throws Exception {
 
 
 		HecubaClientManager<Long> cassandraManager = getHecubaClientManager(bean);
@@ -419,9 +436,10 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * testColumnNameBasedSecondaryIndexBasics
+	 * @throws Exception 
 	 */
 	@Test
-	public void testUpdateRowScenario14() {
+	public void testUpdateRowScenario14() throws Exception {
 		String columnFamily = "testUpdateRowScenario14";
 
 		CassandraParamsBean bean = new CassandraParamsBean();
@@ -555,7 +573,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 
 	@Test
-	public void testReadColumnSlice() {
+	public void testReadColumnSlice() throws Exception {
 		String columnFamily = "testReadColumnSlice";
 		logger.info("Testing Hector read column slice");
 
@@ -681,7 +699,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 	}
 
 	@Test
-	public void testReadColumnSliceMultipleKeys() {
+	public void testReadColumnSliceMultipleKeys() throws Exception {
 		String columnFamily = "testReadColumnSliceMultipleKeys";
 		logger.info("Testing Hector read column slice with multiple keys");
 
@@ -1405,7 +1423,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 	}
 
 	@Test
-	public void testUpdateRow() {
+	public void testUpdateRow() throws Exception {
 		String columnFamily = "testUpdateRow";
 
 		HecubaClientManager<Long> cassandraManager = getHecubaClientManager(columnFamily);
@@ -1452,7 +1470,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 	}
 
 	@Test
-	public void testDeleteRow() {
+	public void testDeleteRow() throws Exception {
 		String columnFamily = "testDeleteRow";
 
 		HecubaClientManager<Long> cassandraManager = getHecubaClientManager(columnFamily);
@@ -1616,21 +1634,23 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * testUpdateRowWithBothTimpStampAndTTLSetToNull
+	 * @throws Exception 
 	 */
 	@Test
-	public void testUpdateRowScenario7() {
+	public void testUpdateRowScenario7() throws Exception {
 		testUpdateRowResults(null, null, "testUpdateRowScenario7");
 	}
 
 	/**
 	 * testUpdateRowWithBothTimpStampAndTTLSetToEmptyMaps
+	 * @throws Exception 
 	 */
 	@Test
-	public void testUpdateRowScenario6() {
+	public void testUpdateRowScenario6() throws Exception {
 		testUpdateRowResults(new HashMap<String, Long>(), new HashMap<String, Integer>(), "testUpdateRowScenario6");
 	}
 
-	private void testUpdateRowResults(Map<String, Long> timestamps, Map<String, Integer> ttls, String columnFamily) {
+	private void testUpdateRowResults(Map<String, Long> timestamps, Map<String, Integer> ttls, String columnFamily) throws Exception {
 		HecubaClientManager<Long> cassandraManager = getHecubaClientManager(columnFamily);
 		final long objectId = 1234L;
 
@@ -1663,9 +1683,10 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * testUpdateRowWithAllTimpStampsSetButNoTTL
+	 * @throws Exception 
 	 */
 	@Test
-	public void testUpdateRowScenario5() {
+	public void testUpdateRowScenario5() throws Exception {
 		Map<String, Long> timestamps = new HashMap<String, Long>();
 		Random random = new Random();
 		for (int i = 0; i < 5; i++) {
@@ -1676,9 +1697,10 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * testUpdateRowWithSomeTimestampsSetButNoTTL
+	 * @throws Exception 
 	 */
 	@Test
-	public void testUpdateRowScenario4() {
+	public void testUpdateRowScenario4() throws Exception {
 		Map<String, Long> timestamps = new HashMap<String, Long>();
 		Random random = new Random();
 
@@ -1690,9 +1712,10 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * testUpdateRowWithAllTTLSetButNoTimestamp
+	 * @throws Exception 
 	 */
 	@Test
-	public void testUpdateRowScenario3() {
+	public void testUpdateRowScenario3() throws Exception {
 		Map<String, Integer> ttls = new HashMap<String, Integer>();
 
 		Random random = new Random();
@@ -1704,9 +1727,10 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * testUpdateRowWithSomeTTLsSetButNoTimestamp
+	 * @throws Exception 
 	 */
 	@Test
-	public void testUpdateRowScenario2() {
+	public void testUpdateRowScenario2() throws Exception {
 		Map<String, Integer> ttls = new HashMap<String, Integer>();
 		Random random = new Random();
 
@@ -1718,9 +1742,10 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * testUpdateRowWithAllTTLAndTimestampSet
+	 * @throws Exception 
 	 */
 	@Test
-	public void testUpdateRowScenario1() {
+	public void testUpdateRowScenario1() throws Exception {
 		Map<String, Integer> ttls = new HashMap<String, Integer>();
 		Map<String, Long> timestamps = new HashMap<String, Long>();
 		Random random = new Random();
@@ -1733,9 +1758,10 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * test retrieval of only keys using secondary index
+	 * @throws Exception 
 	 */
 	@Test
-	public void testRetrieveSecondaryIdxKeys() {
+	public void testRetrieveSecondaryIdxKeys() throws Exception {
 		String columnFamily = "testRetrieveSecondaryIdxKeys";
 
 		CassandraParamsBean bean = new CassandraParamsBean();
@@ -1795,9 +1821,10 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * test update of Row which contains column with TTL and that column is also a secondary index.
+	 * @throws Exception 
 	 */
 	@Test
-	public void testUpdateRowScenario17() {
+	public void testUpdateRowScenario17() throws Exception {
 		String columnFamily = "testUpdateRowScenario17";
 
 		CassandraParamsBean bean = new CassandraParamsBean();
@@ -1899,7 +1926,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 	}
 
 	@Test
-	public void testSecondaryIndexMultiGet() {
+	public void testSecondaryIndexMultiGet() throws Exception {
 		String columnFamily = "testSecondaryIndexMultiGet";
 
 		CassandraParamsBean bean = new CassandraParamsBean();
