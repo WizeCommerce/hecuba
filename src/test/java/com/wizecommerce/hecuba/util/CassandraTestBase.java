@@ -153,7 +153,7 @@ public abstract class CassandraTestBase {
 				}
 				defaultColumnValueTypeElement.setText(isSecondayIndexColumnFamily ? "LongType" : columnValueType);
 
-				// Handle initial cf data, if any.
+				// Handle initial columnFamily data, if any.
 				Map<String, Map<String, Object>> cfData = getData(columnFamilyName);
 				if (cfData != null) {
 					Iterator<String> keyIter = cfData.keySet().iterator();

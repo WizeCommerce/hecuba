@@ -98,7 +98,7 @@
 	<build>
 		<defaultGoal>package</defaultGoal>
 		<plugins>
-			<!-- enables the use of: mvn versions:use-latest-versions with filtering 
+			<!-- enables the use of: mvn versions:use-latest-versions with filtering
 				for only wc packages -->
 			<plugin>
 				<groupId>org.codehaus.mojo</groupId>
@@ -119,6 +119,7 @@
 						<format>html</format>
 						<format>xml</format>
 					</formats>
+					<check/>
 				</configuration>
 			</plugin>
 			<plugin>

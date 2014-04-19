@@ -17,6 +17,7 @@
  */
 package com.wizecommerce.hecuba;
 
+import com.google.common.base.Joiner;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
@@ -26,39 +27,61 @@ import org.joda.time.format.DateTimeFormatter;
  */
 public abstract class HecubaConstants {
 
+	private static final Joiner dotJoiner = Joiner.on(".");
 
 	public static final String GLOBAL_PROP_NAME_PREFIX = "com.wizecommerce.hecuba";
 
 
-	public static final String HECUBA_CASSANDRA_CLIENT_IMPLEMENTATION_MANAGER =
-            GLOBAL_PROP_NAME_PREFIX + "hecuba.cassandraclientmanager";
+	public static final String HECUBA_CASSANDRA_CLIENT_IMPLEMENTATION_MANAGER = getPropertyName("hecuba.cassandraclientmanager");
 
-    public static enum CassandraClientImplementation {
-        HECTOR, ASTYANAX
-    }
+	public static enum CassandraClientImplementation {
+		HECTOR, ASTYANAX
+	}
 
-    public static DateTimeFormatter DATE_FORMATTER = DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z");
+	public static DateTimeFormatter DATE_FORMATTER = DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z");
 
-    /*****************************
-     * Configuration Properties.
-     *****************************/
+	/*****************************
+	 * Configuration Properties.
+	 *****************************/
+
+	public static final String SECONDARY_INDEX_CF_NAME_SUFFIX = "_Secondary_Idx";
+
+	public static final String AUTHENTICATION_USER = getPropertyName("username");
+	public static final String AUTHENTICATION_PASSWORD = getPropertyName("password");
+	public static final String ENABLE_DEBUG_MESSAGES = getPropertyName("hectorpools.enabledebugmessages");
+
+	/******************************
+	 * Astynax Specific Options
+	 ******************************/
+	public static final String ASTYANAX_NODE_DISCOVERY_TYPE = getPropertyName("client.astyanax.nodeDiscoveryType");
+	public static final String ASTYANAX_CONNECTION_POOL_TYPE = getPropertyName("client.astyanax.connectionPoolType");
+	public static final String ASTYANAX_MAX_CONNS_PER_HOST = getPropertyName("client.astyanax.maxConnsPerHost");
+	public static final String ASTYANAX_LATENCY_AWARE_UPDATE_INTERVAL = getPropertyName("client.astyanax.latencyAwareUpdateInterval");
+	public static final String ASTYANAX_LATENCY_AWARE_RESET_INTERVAL = getPropertyName("client.astyanax.latencyAwareResetInterval");
+	public static final String ASTYANAX_LATENCY_AWARE_BADNESS_INTERVAL = getPropertyName("client.astyanax.latencyAwareBadnessInterval");
+	public static final String ASTYANAX_LATENCY_AWARE_WINDOW_SIZE = getPropertyName("client.astyanax.latencyAwareWindowSize");
+
+	/**************************
+	 * Hector Specific Options
+	 **************************/
+	public static final String HECTOR_LOAD_BALANCING_POLICY = getPropertyName("hectorpools.loadbalancingpolicy");
+	public static final String HECTOR_MAX_ACTIVE_POOLS = getPropertyName("hectorpools.maxactive");
+	public static final String HECTOR_MAX_IDLE = getPropertyName("hectorpools.maxidle");
+	public static final String HECTOR_RETRY_DOWN_HOST = getPropertyName("hectorpools.retrydownedhosts");
+	public static final String HECTOR_RETRY_DOWN_HOST_DELAY = getPropertyName("hectorpools.retrydownedhostsinseconds");
+	public static final String HECTOR_THRIFT_SOCKET_TIMEOUT = getPropertyName("hectorpools.thriftsockettimeout");
+	public static final String HECTOR_USE_THRIFT_FRAME_TRANSPORT = getPropertyName("hectorpools.usethriftframedtransport");
 
 
-    public static final String ASTYANAX_NODE_DISCOVERY_TYPE =
-            GLOBAL_PROP_NAME_PREFIX + ".client.astyanax.nodeDiscoveryType";
-    public static final String ASTYANAX_CONNECTION_POOL_TYPE =
-            GLOBAL_PROP_NAME_PREFIX + ".client.astyanax.connectionPoolType";
-    public static final String ASTYANAX_MAX_CONNS_PER_HOST =
-            GLOBAL_PROP_NAME_PREFIX + ".client.astyanax.maxConnsPerHost";
-    public static final String ASTYANAX_LATENCY_AWARE_UPDATE_INTERVAL =
-            GLOBAL_PROP_NAME_PREFIX + ".client.astyanax.latencyAwareUpdateInterval";
-    public static final String ASTYANAX_LATENCY_AWARE_RESET_INTERVAL =
-            GLOBAL_PROP_NAME_PREFIX + ".client.astyanax.latencyAwareResetInterval";
-    public static final String ASTYANAX_LATENCY_AWARE_BADNESS_INTERVAL =
-            GLOBAL_PROP_NAME_PREFIX + ".client.astyanax.latencyAwareBadnessInterval";
-    public static final String ASTYANAX_LATENCY_AWARE_WINDOW_SIZE =
-            GLOBAL_PROP_NAME_PREFIX + ".client.astyanax.latencyAwareWindowSize";
+	public static enum HECTOR_LOAD_BALANCY_POLICIES {
+		LeastActiveBalancingPolicy,
+		DynamicLoadBalancingPolicy,
+		RoundRobinBalancingPolicy,
+	}
 
-    public static final String SECONDARY_INDEX_CF_NAME_SUFFIX = "_Secondary_Idx";
+	private static String getPropertyName(String postfix) {
+		return dotJoiner.join(GLOBAL_PROP_NAME_PREFIX, postfix);
+	}
+
 
 }

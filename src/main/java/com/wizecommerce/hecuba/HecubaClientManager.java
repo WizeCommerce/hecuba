@@ -47,6 +47,8 @@ public abstract class HecubaClientManager<K> {
 	protected String columnFamily;
 	protected int maxColumnCount; // used through property if column count in row > 100
 	protected int maxSiColumnCount;
+	protected String username;
+	protected String password;
 
 	// being a schema flexible datastore we sometimes need to create secondary indexes based on the names of the
 	// columns. The following parameter will enable the secondary index columns. If you set this parameter,
@@ -95,9 +97,11 @@ public abstract class HecubaClientManager<K> {
 		this.locationURLs = parameters.getLocationURLs();
 		this.ports = parameters.getThriftPorts();
 		this.keyspace = parameters.getKeyspace();
-		this.columnFamily = parameters.getCf();
+		this.columnFamily = parameters.getColumnFamily();
 		this.maxColumnCount = parameters.getMaxColumnCount();
 		this.maxSiColumnCount = parameters.getMaxSiColumnCount();
+		this.username = parameters.getUsername();
+		this.password = parameters.getPassword();
 
 		if (StringUtils.isNotBlank(parameters.getSiColumns())) {
 			columnsToIndexOnColumnNameAndValue = Arrays.asList(StringUtils.split(parameters.getSiColumns(), ":"));
@@ -147,7 +151,7 @@ public abstract class HecubaClientManager<K> {
 	 */
 	private void init() {
 		this.isClientAdapterDebugMessagesEnabled = ConfigUtils.getInstance().getConfiguration().getBoolean(
-				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + ".hectorpools.enabledebugmessages", false);
+				HecubaConstants.ENABLE_DEBUG_MESSAGES, false);
 	}
 
 	/**

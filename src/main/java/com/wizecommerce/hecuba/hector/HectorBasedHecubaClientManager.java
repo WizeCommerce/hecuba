@@ -77,13 +77,12 @@ import com.wizecommerce.hecuba.util.ConfigUtils;
 /**
  * Configuring Hector Clients:
  * <p/>
- * HecubaConstants.GLOBAL_PROP_NAME_PREFIX + ".hectorpools.enable com.nextag.db.cassandra.hectorpools.exhaustedpolicy
- * HecubaConstants.GLOBAL_PROP_NAME_PREFIX + ".hectorpools.loadbalancingpolicy com.nextag.db.cassandra.hectorpools
- * .maxactive
- * HecubaConstants.GLOBAL_PROP_NAME_PREFIX + ".hectorpools.maxidle com.nextag.db.cassandra.hectorpools.retrydownedhosts
- * HecubaConstants.GLOBAL_PROP_NAME_PREFIX + ".hectorpools.retrydownedhostsinseconds
- * HecubaConstants.GLOBAL_PROP_NAME_PREFIX + ".hectorpools.thriftsockettimeout
- * HecubaConstants.GLOBAL_PROP_NAME_PREFIX + ".hectorpools.usethriftframedtransport
+ * com.wizecommerce.hecuba.hectorpools.enable com.nextag.db.cassandra.hectorpools.exhaustedpolicy
+ * com.wizecommerce.hecuba.hectorpools.loadbalancingpolicy com.nextag.db.cassandra.hectorpools.maxactive
+ * com.wizecommerce.hecuba.hectorpools.maxidle com.nextag.db.cassandra.hectorpools.retrydownedhosts
+ * com.wizecommerce.hecuba.hectorpools.retrydownedhostsinseconds
+ * com.wizecommerce.hecuba.hectorpools.thriftsockettimeout
+ * com.wizecommerce.hecuba.hectorpools.usethriftframedtransport
  *
  * @author Eran Chinthaka Withana
  */
@@ -97,14 +96,19 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 	protected Serializer<K> keySerializer;
 	protected ThriftColumnFamilyTemplate<String, K> secondaryIndexedColumnFamilyTemplate;
 
+
+	/**
+	 * WARNING: This constructor has been deprecated, please Use {@link HectorBasedHecubaClientManager(com.wizecommerce.hecuba.CassandraParamsBean, me.prettyprint.hector.api.Serializer)} instead
+	 *
+	 */
+	@Deprecated
 	public HectorBasedHecubaClientManager(String clusterName, String locationURL, String ports, String keyspace,
-			String columnFamily, Serializer<K> keySerializer, boolean enableHectorPools) {
+			String columnFamily, Serializer<K> keySerializer) {
 		super(clusterName, locationURL, ports, keyspace, columnFamily);
 		init(keySerializer);
 	}
 
-	public HectorBasedHecubaClientManager(CassandraParamsBean parameters, Serializer<K> keySerializer,
-			boolean enableHectorPools) {
+	public HectorBasedHecubaClientManager(CassandraParamsBean parameters, Serializer<K> keySerializer) {
 		super(parameters);
 		init(keySerializer);
 	}
@@ -449,7 +453,7 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 			secondaryIndexMutator.addInsertion(getSecondaryIndexKey(secondaryIndexByColumnName, ""), secondaryIndexCF, hColumn);
 		}
 		MutationResult execute = secondaryIndexMutator.execute();
-		log.debug(secondaryIndexByColumnNameChanges.size() + " secondary Indexes got updated for the key " + key.toString() + 
+		log.debug(secondaryIndexByColumnNameChanges.size() + " secondary Indexes got updated for the key " + key.toString() +
 				". Exec Time = " + execute.getExecutionTimeMicro() + ", Host used = " + execute.getHostUsed());
 
 	}
@@ -854,29 +858,18 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 		hectorClientConfiguration = new HectorClientConfiguration();
 		final Configuration configuration = ConfigUtils.getInstance().getInstance().getConfiguration();
 		hectorClientConfiguration.setLoadBalancingPolicy(configuration.getString(
-				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + ".hectorpools.loadbalancingpolicy",
-				"DynamicLoadBalancingPolicy"));
-		hectorClientConfiguration.setMaxActive(configuration.getInteger(
-				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + "hectorpools.maxactive", 50));
-		hectorClientConfiguration.setMaxIdle(configuration.getInteger(
-				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + "hectorpools.maxidle", -1));
-
-		hectorClientConfiguration.setRetryDownedHosts(configuration.getBoolean(
-				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + "hectorpools.retrydownedhosts", true));
-
-		hectorClientConfiguration.setRetryDownedHostsDelayInSeconds(configuration.getInteger(
-				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + "hectorpools.retrydownedhostsinseconds", 30));
-
-		hectorClientConfiguration.setThriftSocketTimeout(configuration.getInteger(
-				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + "hectorpools.thriftsockettimeout", 100));
-
-		hectorClientConfiguration.setUseThriftFramedTransport(configuration.getBoolean(
-				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + "hectorpools.usethriftframedtransport", true));
+				HecubaConstants.HECTOR_LOAD_BALANCING_POLICY, HecubaConstants.HECTOR_LOAD_BALANCY_POLICIES.DynamicLoadBalancingPolicy.name()));
+		hectorClientConfiguration.setMaxActive(configuration.getInteger(HecubaConstants.HECTOR_MAX_ACTIVE_POOLS, 50));
+		hectorClientConfiguration.setMaxIdle(configuration.getInteger(HecubaConstants.HECTOR_MAX_IDLE, -1));
+		hectorClientConfiguration.setRetryDownedHosts(configuration.getBoolean(HecubaConstants.HECTOR_RETRY_DOWN_HOST, true));
+		hectorClientConfiguration.setRetryDownedHostsDelayInSeconds(configuration.getInteger(HecubaConstants.HECTOR_RETRY_DOWN_HOST_DELAY, 30));
+		hectorClientConfiguration.setThriftSocketTimeout(configuration.getInteger(HecubaConstants.HECTOR_THRIFT_SOCKET_TIMEOUT, 100));
+		hectorClientConfiguration.setUseThriftFramedTransport(configuration.getBoolean(HecubaConstants.HECTOR_USE_THRIFT_FRAME_TRANSPORT, true));
 	}
 
 	private void reConfigureParameters() {
 
-		columnFamilyTemplates = new ArrayList<ColumnFamilyTemplate<K, String>>();
+		columnFamilyTemplates = new ArrayList<>();
 		configureHectorPools();
 	}
 
@@ -884,13 +877,21 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 
 		final String listOfNodesAndPorts = getListOfNodesAndPorts(locationURLs, ports);
 
-		final CassandraHostConfigurator cassandraHostConfigurator = createCassandraConfigurator();
+		CassandraHostConfigurator cassandraHostConfigurator = createCassandraConfigurator();
 		cassandraHostConfigurator.setHosts(listOfNodesAndPorts);
 		log.info("Hector pool created for " + listOfNodesAndPorts);
 
-		cluster = HFactory.getOrCreateCluster(clusterName, cassandraHostConfigurator);
+		if (StringUtils.isNotBlank(username) && StringUtils.isNotBlank(password)) {
+			Map<String, String> accessMap = new HashMap<>();
+			accessMap.put("username", this.username);
+			accessMap.put("password", this.password);
+			cluster = HFactory.getOrCreateCluster(clusterName, cassandraHostConfigurator, accessMap);
+		} else {
+			cluster = HFactory.getOrCreateCluster(clusterName, cassandraHostConfigurator);
+		}
 
 		keysp = HFactory.createKeyspace(keyspace, cluster, consistencyLevel);
+
 		columnFamilyTemplates.add(new ThriftColumnFamilyTemplate<K, String>(keysp, columnFamily, keySerializer,
 				StringSerializer.get()));
 
@@ -920,6 +921,13 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 				hectorClientConfiguration.getRetryDownedHostsDelayInSeconds());
 		cassandraHostConfigurator.setLoadBalancingPolicy(hectorClientConfiguration.getLoadBalancingPolicy());
 		log.info("Hector Host Configurator Parameters \n" + cassandraHostConfigurator.toString());
+		if (StringUtils.isNotBlank(username) && StringUtils.isNotBlank(password)) {
+			Map<String, String> accessMap = new HashMap<>();
+			accessMap.put("username", this.username);
+			accessMap.put("password", this.password);
+		}
+
+
 		return cassandraHostConfigurator;
 	}
 
@@ -1163,7 +1171,7 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 		}
 		allHostsSB.append("}");
 		log.debug(allHostsSB.toString());
-		
+
 		StringBuilder downedHostsSB = new StringBuilder("Downed Hosts = {");
 		for (CassandraHost host : connectionManager.getDownedHosts()) {
 			downedHostsSB.append(host.getHost() + ", ");

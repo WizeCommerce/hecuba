@@ -15,21 +15,25 @@
 package com.wizecommerce.hecuba;
 
 
+import com.google.common.base.Objects;
+
 /**
  * This is a bean to store cassandra connection parameters.
  * @author asinghal
  */
 public class CassandraParamsBean {
 
-	// Cassandra cluster parameters {"cf", "keyspace", "thriftPorts",
+	// Cassandra cluster parameters {"columnFamily", "keyspace", "thriftPorts",
 	// "locationURLs", "clustername"};
 
 	protected String clustername;
 	protected String locationURLs;
 	protected String thriftPorts;
 	protected String keyspace;
-	protected String cf;
+	protected String columnFamily;
 	protected String keyType;
+	protected String username;
+	protected String password;
 
 	// secondary indexed columns. I shortened this on purpose to make the life of an admin, who will put these params in
 	// using the configuration, easier.
@@ -47,6 +51,22 @@ public class CassandraParamsBean {
 	// we will match each and every column name with the given pattern and create a secondary index out of this.
 	protected String siByColumnsPattern = null;
 
+
+	public String getUsername() {
+		return username;
+	}
+
+	public void setUsername(String username) {
+		this.username = username;
+	}
+
+	public String getPassword() {
+		return password;
+	}
+
+	public void setPassword(String password) {
+		this.password = password;
+	}
 
 	public String getKeyType() {
 		return keyType;
@@ -88,12 +108,12 @@ public class CassandraParamsBean {
 		this.keyspace = keyspace;
 	}
 
-	public String getCf() {
-		return cf;
+	public String getColumnFamily() {
+		return columnFamily;
 	}
 
-	public void setCf(String cf) {
-		this.cf = cf;
+	public void setColumnFamily(String columnFamily) {
+		this.columnFamily = columnFamily;
 	}
 
 	public String getSiColumns() {
@@ -122,10 +142,19 @@ public class CassandraParamsBean {
 
 
 	public String toString() {
-		return "ClusterName:" + getClustername() + ", LocationURLs:" + getLocationURLs() + ", KeySpace:" +
-				getKeyspace() + ", ThriftPorts:" + getThriftPorts() + ", ColumnFamily:" + getCf() + ", KeyType:" +
-				getKeyType() + ", SIColumns:" + getSiColumns() + ", MaxColumnCount:" + getMaxColumnCount() +
-				", MaxSiColumnCount: " + getMaxSiColumnCount();
+		return Objects.toStringHelper(this)
+				.add("ClusterName", getClustername())
+				.add("LocationURLs", getLocationURLs())
+				.add("KeySpace,",getKeyspace())
+				.add("ThriftPorts", getThriftPorts())
+				.add("ColumnFamily", getColumnFamily())
+				.add("KeyType", getKeyType())
+				.add("SIColumns", getSiColumns())
+				.add("MaxColumnCount", getMaxColumnCount())
+				.add("MaxSiColumnCount", getMaxSiColumnCount())
+				.add("username", getUsername())
+//				.add("password", "*censored*")
+				.toString();
 
 	}
 
@@ -137,18 +166,39 @@ public class CassandraParamsBean {
 		this.siByColumnsPattern = siByColumnsPattern;
 	}
 
+	public CassandraParamsBean() { }
+
+	public CassandraParamsBean(CassandraParamsBean initialBean) {
+		setClustername(clustername);
+		setColumnFamily(columnFamily);
+		setKeyspace(initialBean.keyspace);
+		setLocationURLs(initialBean.locationURLs);
+		setThriftPorts(initialBean.thriftPorts);
+		setKeyType(initialBean.keyType);
+		setSiColumns(initialBean.siColumns);
+		setMaxColumnCount(initialBean.maxColumnCount);
+		setMaxSiColumnCount(initialBean.maxSiColumnCount);
+		setSiByColumnsPattern(initialBean.siByColumnsPattern);
+		setUsername(initialBean.getUsername());
+		setPassword(initialBean.getPassword());
+	}
+
+
+	@Deprecated
 	public CassandraParamsBean deepCopy() {
 		CassandraParamsBean cassandraParamsBean = new CassandraParamsBean();
-		cassandraParamsBean.setClustername(this.clustername);
-		cassandraParamsBean.setCf(this.cf);
-		cassandraParamsBean.setKeyspace(this.keyspace);
-		cassandraParamsBean.setLocationURLs(this.locationURLs);
-		cassandraParamsBean.setThriftPorts(this.thriftPorts);
-		cassandraParamsBean.setKeyType(this.keyType);
-		cassandraParamsBean.setSiColumns(this.siColumns);
-		cassandraParamsBean.setMaxColumnCount(this.maxColumnCount);
-		cassandraParamsBean.setMaxSiColumnCount(this.maxSiColumnCount);
-		cassandraParamsBean.setSiByColumnsPattern(this.siByColumnsPattern);
+		cassandraParamsBean.setClustername(clustername);
+		cassandraParamsBean.setColumnFamily(columnFamily);
+		cassandraParamsBean.setKeyspace(keyspace);
+		cassandraParamsBean.setLocationURLs(locationURLs);
+		cassandraParamsBean.setThriftPorts(thriftPorts);
+		cassandraParamsBean.setKeyType(keyType);
+		cassandraParamsBean.setSiColumns(siColumns);
+		cassandraParamsBean.setMaxColumnCount(maxColumnCount);
+		cassandraParamsBean.setMaxSiColumnCount(maxSiColumnCount);
+		cassandraParamsBean.setSiByColumnsPattern(siByColumnsPattern);
+		cassandraParamsBean.setPassword(password);
+		cassandraParamsBean.setUsername(username);
 		return cassandraParamsBean;
 	}
 }
