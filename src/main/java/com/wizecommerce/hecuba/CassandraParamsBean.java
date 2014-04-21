@@ -19,6 +19,7 @@ import com.google.common.base.Objects;
 
 /**
  * This is a bean to store cassandra connection parameters.
+ *
  * @author asinghal
  */
 public class CassandraParamsBean {
@@ -108,6 +109,16 @@ public class CassandraParamsBean {
 		this.keyspace = keyspace;
 	}
 
+	@Deprecated
+	public String getCf() {
+		return columnFamily;
+	}
+
+	@Deprecated
+	public void setCf(String cf) {
+		this.columnFamily = cf;
+	}
+
 	public String getColumnFamily() {
 		return columnFamily;
 	}
@@ -145,7 +156,7 @@ public class CassandraParamsBean {
 		return Objects.toStringHelper(this)
 				.add("ClusterName", getClustername())
 				.add("LocationURLs", getLocationURLs())
-				.add("KeySpace,",getKeyspace())
+				.add("KeySpace,", getKeyspace())
 				.add("ThriftPorts", getThriftPorts())
 				.add("ColumnFamily", getColumnFamily())
 				.add("KeyType", getKeyType())
@@ -166,7 +177,8 @@ public class CassandraParamsBean {
 		this.siByColumnsPattern = siByColumnsPattern;
 	}
 
-	public CassandraParamsBean() { }
+	public CassandraParamsBean() {
+	}
 
 	public CassandraParamsBean(CassandraParamsBean initialBean) {
 		setClustername(clustername);
