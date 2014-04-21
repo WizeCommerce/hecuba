@@ -26,7 +26,7 @@ public class CassandraParamsBeanTest {
     @Test
     public void testDeepCopyWithSetValues() throws Exception {
         CassandraParamsBean initialBean = new CassandraParamsBean();
-        initialBean.setCf("MyColumnFamily");
+        initialBean.setColumnFamily("MyColumnFamily");
         initialBean.setClustername("My Awesome Cluster");
         initialBean.setKeyspace("MyAwesomeKeyspace");
         initialBean.setKeyType("UTF8Type");
@@ -35,26 +35,37 @@ public class CassandraParamsBeanTest {
         initialBean.setThriftPorts("88990");
 	    initialBean.setMaxSiColumnCount(1234);
 	    initialBean.setMaxColumnCount(4321);
+	    initialBean.setUsername("username");
+	    initialBean.setPassword("secret");
 
         final CassandraParamsBean deepCopiedBean = initialBean.deepCopy();
-        assertEquals(initialBean.getCf(), deepCopiedBean.getCf());
-        assertEquals(initialBean.getClustername(), deepCopiedBean.getClustername());
-        assertEquals(initialBean.getKeyspace(), deepCopiedBean.getKeyspace());
-        assertEquals(initialBean.getKeyType(), deepCopiedBean.getKeyType());
-        assertEquals(initialBean.getLocationURLs(), deepCopiedBean.getLocationURLs());
-        assertEquals(initialBean.getSiColumns(), deepCopiedBean.getSiColumns());
-        assertEquals(initialBean.getThriftPorts(), deepCopiedBean.getThriftPorts());
-	    assertEquals(initialBean.getMaxColumnCount(), deepCopiedBean.getMaxColumnCount());
-	    assertEquals(initialBean.getMaxSiColumnCount(), deepCopiedBean.getMaxSiColumnCount());
+	    assertBeans(initialBean, deepCopiedBean);
 
     }
+
+	@Test
+	public void testCopyConstructor() throws Exception {
+	    CassandraParamsBean initialBean = new CassandraParamsBean();
+        initialBean.setColumnFamily("MyColumnFamily");
+        initialBean.setClustername("My Awesome Cluster");
+        initialBean.setKeyspace("MyAwesomeKeyspace");
+        initialBean.setKeyType("UTF8Type");
+        initialBean.setLocationURLs("www.wizecommerce.com");
+        initialBean.setSiColumns("ColumnOne:ColumnTwo");
+        initialBean.setThriftPorts("88990");
+	    initialBean.setMaxSiColumnCount(1234);
+	    initialBean.setMaxColumnCount(4321);
+	    initialBean.setUsername("username");
+	    initialBean.setPassword("secret");
+
+	}
 
     @Test
     public void testDeepCopyWithDefaultValues() throws Exception {
         final   CassandraParamsBean initialBean = new CassandraParamsBean();
 
         final CassandraParamsBean deepCopiedBean = initialBean.deepCopy();
-        assertEquals(initialBean.getCf(), deepCopiedBean.getCf());
+        assertEquals(initialBean.getColumnFamily(), deepCopiedBean.getColumnFamily());
         assertEquals(initialBean.getClustername(), deepCopiedBean.getClustername());
         assertEquals(initialBean.getKeyspace(), deepCopiedBean.getKeyspace());
         assertEquals(initialBean.getKeyType(), deepCopiedBean.getKeyType());
@@ -63,7 +74,23 @@ public class CassandraParamsBeanTest {
         assertEquals(initialBean.getThriftPorts(), deepCopiedBean.getThriftPorts());
 	    assertEquals(initialBean.getMaxColumnCount(), deepCopiedBean.getMaxColumnCount());
 	    assertEquals(initialBean.getMaxSiColumnCount(), deepCopiedBean.getMaxSiColumnCount());
-
-
+	    assertEquals(initialBean.getUsername(), deepCopiedBean.getUsername());
+	    assertEquals(initialBean.getPassword(), deepCopiedBean.getPassword());
     }
+
+	private void assertBeans(CassandraParamsBean initialBean, CassandraParamsBean deepCopiedBean ) {
+	    assertEquals(initialBean.getColumnFamily(), deepCopiedBean.getColumnFamily());
+        assertEquals(initialBean.getClustername(), deepCopiedBean.getClustername());
+        assertEquals(initialBean.getKeyspace(), deepCopiedBean.getKeyspace());
+        assertEquals(initialBean.getKeyType(), deepCopiedBean.getKeyType());
+        assertEquals(initialBean.getLocationURLs(), deepCopiedBean.getLocationURLs());
+        assertEquals(initialBean.getSiColumns(), deepCopiedBean.getSiColumns());
+        assertEquals(initialBean.getThriftPorts(), deepCopiedBean.getThriftPorts());
+	    assertEquals(initialBean.getMaxColumnCount(), deepCopiedBean.getMaxColumnCount());
+	    assertEquals(initialBean.getMaxSiColumnCount(), deepCopiedBean.getMaxSiColumnCount());
+	    assertEquals(initialBean.getUsername(), deepCopiedBean.getUsername());
+	    assertEquals(initialBean.getPassword(), deepCopiedBean.getPassword());
+	}
+
+
 }

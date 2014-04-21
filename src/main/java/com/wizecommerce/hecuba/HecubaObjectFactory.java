@@ -37,9 +37,7 @@ public class HecubaObjectFactory {
 															  com.netflix.astyanax.serializers.LongSerializer.get());
 		} else {
 			// Default.
-			return new HectorBasedHecubaClientManager<>(parameters,
-															me.prettyprint.cassandra.serializers.LongSerializer.get(),
-															true);
+			return new HectorBasedHecubaClientManager<>(parameters, me.prettyprint.cassandra.serializers.LongSerializer.get());
 		}
 	}
 
@@ -51,9 +49,7 @@ public class HecubaObjectFactory {
 																								.get());
 		} else {
 			// Default.
-			return new HectorBasedHecubaClientManager<String>(parameters,
-															  me.prettyprint.cassandra.serializers.StringSerializer
-																								  .get(), true);
+			return new HectorBasedHecubaClientManager<String>(parameters, me.prettyprint.cassandra.serializers.StringSerializer.get());
 		}
 	}
 

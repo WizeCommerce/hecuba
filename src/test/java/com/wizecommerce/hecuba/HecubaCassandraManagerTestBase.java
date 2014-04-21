@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.ListUtils;
@@ -45,7 +46,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	// Apparently, cassandra can not handle larger integer set as TTL. So we are limiting the TTL to 10 years (which
 	// technically is equal to not setting TTL at all :).
-	final int TEN_YEARS = 3600 * 24 * 365 * 10;
+	final int TEN_YEARS = (int) TimeUnit.DAYS.toSeconds(365 * 10);
 
 	protected HecubaCassandraManagerTestBase(String className) throws IOException {
 		super(className);
@@ -66,14 +67,14 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		bean.setLocationURLs(locationURL);
 		bean.setThriftPorts(thriftPorts);
 		bean.setKeyspace(keyspace);
-		bean.setCf(cf);
+		bean.setColumnFamily(cf);
 		bean.setSiColumns(secondaryIndexColumns);
 
 		assertEquals(clusterName, bean.getClustername());
 		assertEquals(locationURL, bean.getLocationURLs());
 		assertEquals(thriftPorts, bean.getThriftPorts());
 		assertEquals(keyspace, bean.getKeyspace());
-		assertEquals(cf, bean.getCf());
+		assertEquals(cf, bean.getColumnFamily());
 		assertEquals(secondaryIndexColumns, bean.getSiColumns());
 
 
@@ -94,7 +95,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 	 */
 	/**
 	 * testSecondaryIndexWithMaxColumnsOverride
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	@Test
 	public void testUpdateRowScenario16() throws Exception {
@@ -109,7 +110,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		bean.setKeyspace(KEYSPACE);
 		bean.setMaxSiColumnCount(maxResultSetSize);
 		bean.setMaxColumnCount(maxResultSetSize);
-		bean.setCf(columnFamily);
+		bean.setColumnFamily(columnFamily);
 		bean.setSiColumns("MySecondaryKey_1:MySecondaryKey_2");
 
 		//Run all generic tests to verify standard behavior is still functional.
@@ -174,7 +175,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		bean.setKeyspace(KEYSPACE);
 		bean.setMaxSiColumnCount(maxResultSetSize);
 		bean.setMaxColumnCount(maxResultSetSize);
-		bean.setCf(columnFamily);
+		bean.setColumnFamily(columnFamily);
 		bean.setSiColumns("MySecondaryKey_1:MySecondaryKey_2");
 
 		// retrieve the cassandra manager.
@@ -250,7 +251,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * testSecondaryIndexWithUpdatesToMultipleColumns
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	@Test
 	public void testUpdateRowScenario15() throws Exception {
@@ -261,7 +262,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		bean.setLocationURLs(LOCATION);
 		bean.setThriftPorts(PORT);
 		bean.setKeyspace(KEYSPACE);
-		bean.setCf(columnFamily);
+		bean.setColumnFamily(columnFamily);
 		bean.setSiColumns("MySecondaryKey_1:MySecondaryKey_2");
 		runSecondaryIndexTests(bean);
 
@@ -436,7 +437,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * testColumnNameBasedSecondaryIndexBasics
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	@Test
 	public void testUpdateRowScenario14() throws Exception {
@@ -447,7 +448,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		bean.setLocationURLs(LOCATION);
 		bean.setThriftPorts(PORT);
 		bean.setKeyspace(KEYSPACE);
-		bean.setCf(columnFamily);
+		bean.setColumnFamily(columnFamily);
 
 		// create secondary index on all column names.
 		bean.setSiByColumnsPattern(".*");
@@ -582,7 +583,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		bean.setLocationURLs(LOCATION);
 		bean.setThriftPorts(PORT);
 		bean.setKeyspace(KEYSPACE);
-		bean.setCf(columnFamily);
+		bean.setColumnFamily(columnFamily);
 
 		HecubaClientManager<Long> cassandraManager = getHecubaClientManager(bean);
 
@@ -708,7 +709,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		bean.setLocationURLs(LOCATION);
 		bean.setThriftPorts(PORT);
 		bean.setKeyspace(KEYSPACE);
-		bean.setCf(columnFamily);
+		bean.setColumnFamily(columnFamily);
 
 		HecubaClientManager<Long> cassandraManager = getHecubaClientManager(bean);
 		HashMap<String, Object> row1 = new HashMap<String, Object>();
@@ -962,7 +963,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		bean.setLocationURLs(LOCATION);
 		bean.setThriftPorts(PORT);
 		bean.setKeyspace(KEYSPACE);
-		bean.setCf(columnFamily);
+		bean.setColumnFamily(columnFamily);
 
 		HecubaClientManager<Long> cassandraManager = getHecubaClientManager(bean);
 		Map<String, Object> row = new HashMap<String, Object>();
@@ -1006,7 +1007,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		bean.setLocationURLs(LOCATION);
 		bean.setThriftPorts(PORT);
 		bean.setKeyspace(KEYSPACE);
-		bean.setCf(columnFamily);
+		bean.setColumnFamily(columnFamily);
 
 		HecubaClientManager<Long> cassandraManager = getHecubaClientManager(bean);
 
@@ -1204,7 +1205,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		bean.setLocationURLs(LOCATION);
 		bean.setThriftPorts(PORT);
 		bean.setKeyspace(KEYSPACE);
-		bean.setCf(columnFamily);
+		bean.setColumnFamily(columnFamily);
 		bean.setSiColumns("MySecondaryKey_1:MySecondaryKey_2");
 
 
@@ -1634,7 +1635,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * testUpdateRowWithBothTimpStampAndTTLSetToNull
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	@Test
 	public void testUpdateRowScenario7() throws Exception {
@@ -1643,7 +1644,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * testUpdateRowWithBothTimpStampAndTTLSetToEmptyMaps
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	@Test
 	public void testUpdateRowScenario6() throws Exception {
@@ -1683,7 +1684,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * testUpdateRowWithAllTimpStampsSetButNoTTL
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	@Test
 	public void testUpdateRowScenario5() throws Exception {
@@ -1697,7 +1698,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * testUpdateRowWithSomeTimestampsSetButNoTTL
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	@Test
 	public void testUpdateRowScenario4() throws Exception {
@@ -1712,7 +1713,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * testUpdateRowWithAllTTLSetButNoTimestamp
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	@Test
 	public void testUpdateRowScenario3() throws Exception {
@@ -1727,7 +1728,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * testUpdateRowWithSomeTTLsSetButNoTimestamp
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	@Test
 	public void testUpdateRowScenario2() throws Exception {
@@ -1742,7 +1743,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * testUpdateRowWithAllTTLAndTimestampSet
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	@Test
 	public void testUpdateRowScenario1() throws Exception {
@@ -1758,7 +1759,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * test retrieval of only keys using secondary index
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	@Test
 	public void testRetrieveSecondaryIdxKeys() throws Exception {
@@ -1769,7 +1770,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		bean.setLocationURLs(LOCATION);
 		bean.setThriftPorts(PORT);
 		bean.setKeyspace(KEYSPACE);
-		bean.setCf(columnFamily);
+		bean.setColumnFamily(columnFamily);
 		bean.setSiColumns("MySecondaryKey");
 
 		// retrieve the cassandra manager.
@@ -1808,12 +1809,12 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		final Map<String, List<Long>> keysMap = cassandraManager.retrieveKeysBySecondaryIndex("MySecondaryKey", siColumnValues);
 		assertNotNull(keysMap);
 		assertEquals(2, keys.size());
-		
+
 		assertNotNull(keysMap.get("MySecondaryValue"));
 		assertEquals(2, keysMap.get("MySecondaryValue").size());
 		assertEquals(new Long(1234L), keysMap.get("MySecondaryValue").get(0));
 		assertEquals(new Long(2345L), keysMap.get("MySecondaryValue").get(1));
-		
+
 		assertNotNull(keysMap.get("MySecondaryValue3"));
 		assertEquals(1, keysMap.get("MySecondaryValue3").size());
 		assertEquals(new Long(3456L), keysMap.get("MySecondaryValue3").get(0));
@@ -1821,7 +1822,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 	/**
 	 * test update of Row which contains column with TTL and that column is also a secondary index.
-	 * @throws Exception 
+	 * @throws Exception
 	 */
 	@Test
 	public void testUpdateRowScenario17() throws Exception {
@@ -1832,7 +1833,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		bean.setLocationURLs(LOCATION);
 		bean.setThriftPorts(PORT);
 		bean.setKeyspace(KEYSPACE);
-		bean.setCf(columnFamily);
+		bean.setColumnFamily(columnFamily);
 		bean.setSiColumns("MySecondaryKey_1:MySecondaryKey_2");
 
 		// retrieve the cassandra manager.
@@ -1934,7 +1935,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		bean.setLocationURLs(LOCATION);
 		bean.setThriftPorts(PORT);
 		bean.setKeyspace(KEYSPACE);
-		bean.setCf(columnFamily);
+		bean.setColumnFamily(columnFamily);
 		bean.setSiColumns("MySecondaryKey_1:MySecondaryKey_2");
 
 		//Large SecondIndex result set.

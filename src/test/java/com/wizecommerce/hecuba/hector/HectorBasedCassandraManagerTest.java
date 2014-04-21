@@ -42,11 +42,11 @@ public class HectorBasedCassandraManagerTest extends HecubaCassandraManagerTestB
 															String keyspace, String columnFamily) {
 		return new HectorBasedHecubaClientManager<Long>(clusterName,
 														   locationURL, ports, keyspace, columnFamily,
-														   LongSerializer.get(), false);
+														   LongSerializer.get() );
 	}
 
 	public HecubaClientManager<Long> getHecubaClientManager(CassandraParamsBean paramsBean) {
-		return new HectorBasedHecubaClientManager<Long>(paramsBean, LongSerializer.get(), false);
+		return new HectorBasedHecubaClientManager<Long>(paramsBean, LongSerializer.get());
 	}
 
 }

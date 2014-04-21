@@ -38,6 +38,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.netflix.astyanax.connectionpool.impl.SimpleAuthenticationCredentials;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.configuration.Configuration;
@@ -154,6 +155,12 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 				configuration.getFloat(HecubaConstants.ASTYANAX_LATENCY_AWARE_BADNESS_INTERVAL, 0.5f));
 		// Enabled SMA. Omit this to use round robin with a token range.
 		connectionPoolConfigurationImpl.setLatencyScoreStrategy(smaLatencyScoreStrategyImpl);
+
+		if(StringUtils.isNotBlank(username) && StringUtils.isNotBlank(password)) {
+
+			SimpleAuthenticationCredentials simpleAuth =new SimpleAuthenticationCredentials(username, password);
+			connectionPoolConfigurationImpl.setAuthenticationCredentials(simpleAuth);
+		}
 
 		connectionPoolMonitor = new CountingConnectionPoolMonitor();
 		context = new AstyanaxContext.Builder().forCluster(clusterName).forKeyspace(keyspaceName)
@@ -399,7 +406,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 				log.info("Row retrieved from Cassandra. Exec Time (micro-sec) = " + result.getLatency() / 1000 +
 						", Host used = " + result.getHost() + ", Key = " + key);
 			}
-			return new AstyanaxResultSet<K, String>(columns);
+			return new AstyanaxResultSet<>(columns);
 
 		} catch (ConnectionException e) {
 			if (log.isDebugEnabled()) {
