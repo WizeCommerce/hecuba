@@ -14,13 +14,13 @@
 
 package com.wizecommerce.hecuba;
 
+import com.datastax.driver.core.DataType;
 import com.wizecommerce.hecuba.astyanax.AstyanaxBasedHecubaClientManager;
+import com.wizecommerce.hecuba.datastax.DataStaxBasedHecubaClientManager;
 import com.wizecommerce.hecuba.hector.HectorBasedHecubaClientManager;
 import com.wizecommerce.hecuba.util.ConfigUtils;
-import org.apache.log4j.Logger;
 
 public class HecubaObjectFactory {
-	private static final Logger log = Logger.getLogger(HecubaObjectFactory.class);
 	private static final HecubaObjectFactory instance = new HecubaObjectFactory();
 
 	private HecubaObjectFactory() {
@@ -30,35 +30,37 @@ public class HecubaObjectFactory {
 		return instance;
 	}
 
-	public HecubaClientManager<Long> getHecubaClientManagerWithLongKeys(CassandraParamsBean parameters,
-																		HecubaConstants.CassandraClientImplementation cassandraManagerType) {
-		if (cassandraManagerType == HecubaConstants.CassandraClientImplementation.ASTYANAX) {
-			return new AstyanaxBasedHecubaClientManager<>(parameters,
-															  com.netflix.astyanax.serializers.LongSerializer.get());
-		} else {
-			// Default.
+	public HecubaClientManager<Long> getHecubaClientManagerWithLongKeys(CassandraParamsBean parameters, HecubaConstants.CassandraClientImplementation cassandraManagerType) {
+		switch (cassandraManagerType) {
+		case ASTYANAX:
+			return new AstyanaxBasedHecubaClientManager<>(parameters, com.netflix.astyanax.serializers.LongSerializer.get());
+		case HECTOR:
 			return new HectorBasedHecubaClientManager<>(parameters, me.prettyprint.cassandra.serializers.LongSerializer.get());
+		case DATASTAX:
+			return new DataStaxBasedHecubaClientManager<>(parameters, DataType.bigint());
+		default:
+			throw new RuntimeException("Unhandled CassandraManagerType: " + cassandraManagerType);
 		}
 	}
 
-	public HecubaClientManager<String> getHecubaClientManagerWithStringKeys(CassandraParamsBean parameters,
-																			HecubaConstants.CassandraClientImplementation cassandraManagerType) {
-		if (cassandraManagerType == HecubaConstants.CassandraClientImplementation.ASTYANAX) {
-			return new AstyanaxBasedHecubaClientManager<String>(parameters,
-																com.netflix.astyanax.serializers.StringSerializer
-																								.get());
-		} else {
-			// Default.
+	public HecubaClientManager<String> getHecubaClientManagerWithStringKeys(CassandraParamsBean parameters, HecubaConstants.CassandraClientImplementation cassandraManagerType) {
+		switch (cassandraManagerType) {
+		case ASTYANAX:
+			return new AstyanaxBasedHecubaClientManager<String>(parameters, com.netflix.astyanax.serializers.StringSerializer.get());
+		case HECTOR:
 			return new HectorBasedHecubaClientManager<String>(parameters, me.prettyprint.cassandra.serializers.StringSerializer.get());
+		case DATASTAX:
+			return new DataStaxBasedHecubaClientManager<>(parameters, DataType.text());
+		default:
+			throw new RuntimeException("Unhandled CassandraManagerType: " + cassandraManagerType);
 		}
 	}
 
 	@SuppressWarnings("unchecked")
 	public <K> HecubaClientManager<K> getHecubaClientManager(CassandraParamsBean parameters, Class<K> keyClass) {
-		final String clientManagerName = ConfigUtils.getInstance().getConfiguration().getString(
-				HecubaConstants.HECUBA_CASSANDRA_CLIENT_IMPLEMENTATION_MANAGER, "HECTOR").toUpperCase();
-		final HecubaConstants.CassandraClientImplementation cassandraManagerType =
-				HecubaConstants.CassandraClientImplementation.valueOf(clientManagerName);
+		final String clientManagerName = ConfigUtils.getInstance().getConfiguration().getString(HecubaConstants.HECUBA_CASSANDRA_CLIENT_IMPLEMENTATION_MANAGER, "HECTOR")
+				.toUpperCase();
+		final HecubaConstants.CassandraClientImplementation cassandraManagerType = HecubaConstants.CassandraClientImplementation.valueOf(clientManagerName);
 		if (keyClass == String.class) {
 			return (HecubaClientManager<K>) getHecubaClientManagerWithStringKeys(parameters, cassandraManagerType);
 		} else {

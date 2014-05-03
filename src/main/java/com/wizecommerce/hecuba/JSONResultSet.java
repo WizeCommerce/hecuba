@@ -121,8 +121,10 @@ public class JSONResultSet {
 
 	/**
 	 * you should be storing dates as longs
-	 * @param fieldName
-	 * @return
+	 * 
+	 * @param fieldName name of the field
+	 * 
+	 * @return the date associated with the fieldName 
 	 */
 	@Deprecated
 	public Date getDate(String fieldName) {
@@ -132,11 +134,15 @@ public class JSONResultSet {
 
 
 	/**
-	// NOTE:  Using simple-json (our current implementation), date and time
-	// are considered complex objects.	It is recommended to store the date
-	// in json as the epoch time ie.   .getTime(); which should be available
-	// for	java.util.Date, java.sql.Date, and java.sql.Timestamp;
-	**/
+	 * NOTE: Using simple-json (our current implementation), date and time are considered complex objects. It is recommended to store the date in json as the epoch time ie.
+	 * .getTime(); which should be available for java.util.Date, java.sql.Date, and java.sql.Timestamp;
+	 * 
+	 * @param fieldName name of the field
+	 * @param defaultDate default date to return if no value assocated with the field
+	 * 
+	 * @return the associated with the fieldName or defaultDate if no value associated with the field
+	 * 
+	 **/
 	@Deprecated
 	public Date getDate(String fieldName, Date defaultDate) {
 

@@ -25,11 +25,12 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * This implementation wraps {@link me.prettyprint.hector.api.beans.Rows} and {@link me.prettyprint.hector.api.beans.ColumnSlice} to read values from cassandra </br> K - Key type
- * </br>
- * N - Column name type </br> V - Column
- * value type </br> </p>
- * <p/>
+ * This implementation wraps {@link me.prettyprint.hector.api.beans.Rows} and {@link me.prettyprint.hector.api.beans.ColumnSlice} to read values from cassandra
+ * 
+ * @param <K> - Key type
+ * @param <N> - Column name type
+ * @param <V> - Column value type
+ * 
  * User: Samir Faci Date: 8/14/12
  */
 public class HectorColumnSliceResultSet<K, N, V> extends AbstractCassandraResultSet<K, N> {

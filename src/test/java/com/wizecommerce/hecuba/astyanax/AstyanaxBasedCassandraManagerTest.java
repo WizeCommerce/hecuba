@@ -14,22 +14,17 @@
 
 package com.wizecommerce.hecuba.astyanax;
 
+import java.util.Map;
+
 import com.netflix.astyanax.serializers.LongSerializer;
 import com.wizecommerce.hecuba.CassandraParamsBean;
 import com.wizecommerce.hecuba.HecubaCassandraManagerTestBase;
 import com.wizecommerce.hecuba.HecubaClientManager;
-import org.mortbay.util.MultiMap;
-
-import java.io.IOException;
 
 public class AstyanaxBasedCassandraManagerTest extends HecubaCassandraManagerTestBase {
 
-	public AstyanaxBasedCassandraManagerTest() throws IOException {
-		super(AstyanaxBasedCassandraManagerTest.class.getName());
-	}
-
 	@Override
-	protected MultiMap getData(String columnFamilyName) {
+	protected Map<String, Map<String, Object>> getData(String columnFamilyName) {
 		return null;
 	}
 
@@ -38,12 +33,6 @@ public class AstyanaxBasedCassandraManagerTest extends HecubaCassandraManagerTes
 
 	}
 
-	public HecubaClientManager<Long> getHecubaClientManager(String clusterName, String locationURL, String ports,
-															String keyspace, String columnFamily) {
-		return new AstyanaxBasedHecubaClientManager<Long>(clusterName,
-				locationURL, ports, keyspace, columnFamily,
-				LongSerializer.get());
-	}
 	public HecubaClientManager<Long> getHecubaClientManager(CassandraParamsBean paramsBean) {
 		return new AstyanaxBasedHecubaClientManager<Long>(paramsBean, LongSerializer.get());
 	}

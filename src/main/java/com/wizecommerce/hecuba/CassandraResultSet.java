@@ -24,10 +24,11 @@ public interface CassandraResultSet<K, N> {
 	public static final String HOST_NOT_AVAILABLE = "Not Available";
 
 	/**
-	 * Retrieves a string values from the column result. Note that we decided to
-	 * push even the null values into Cassandra by encoding them as "null".
-	 * Because of that we are explicitly checking the value of the retrieved
-	 * value for "null" string so that we can return null objects.
+	 * Retrieves a string values from the column result. Note that we decided to push even the null values into Cassandra by encoding them as "null". Because of that we are
+	 * explicitly checking the value of the retrieved value for "null" string so that we can return null objects.
+	 * 
+	 * @param fieldName name of the column
+	 * @return string value of the fieldName
 	 */
 	public abstract String getString(N fieldName);
 
@@ -88,18 +89,12 @@ public interface CassandraResultSet<K, N> {
 	public abstract void nextResult();
 
 	/**
-	 * This can be used to get the host used to run the last query. Will return "Not Available" if this informtion is
-	 * not available.
-	 *
-	 * @return
+	 * @return host used in the last query. "Not Available" if not available
 	 */
 	public abstract String getHost();
 
 	/**
-	 * This can be used to get the execution time for the last query. Will return -1 if this information is not
-	 * available.
-	 *
-	 * @return
+	 * @return executation time for the last query. -1 means not available
 	 */
 	public abstract long getExecutionLatency();
 

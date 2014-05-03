@@ -29,7 +29,7 @@ import org.apache.commons.configuration.Configuration;
  * list of properties:
  *
  * <h3>General Properties</h3>
- * <table>
+ * <table summary="General Properties">
  *     <tr>
  *         <th>Property</th>
  *         <th>Default Value</th>
@@ -78,13 +78,10 @@ import org.apache.commons.configuration.Configuration;
  * </table>
  *
  * <h3>Hector Specific Properties</h3>
- * <table>
- *
- * </table>
- *
+
  * <h3>Astyanax Specific Properties</h3>
  *
- * <table>
+ * <table summary="Astyanax Specific Properties">
  *    <tr>
  *        <td>GLOBAL_PROP_NAME_PREFIX + ".client.astyanax.nodeDiscoveryType"</td>
  *        <td>RING_DESCRIBE</td>

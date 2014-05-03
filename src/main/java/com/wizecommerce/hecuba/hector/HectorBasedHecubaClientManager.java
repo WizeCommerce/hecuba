@@ -18,15 +18,7 @@
 package com.wizecommerce.hecuba.hector;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import me.prettyprint.cassandra.connection.HConnectionManager;
 import me.prettyprint.cassandra.model.IndexedSlicesQuery;
@@ -34,7 +26,6 @@ import me.prettyprint.cassandra.model.thrift.ThriftCounterColumnQuery;
 import me.prettyprint.cassandra.serializers.StringSerializer;
 import me.prettyprint.cassandra.service.CassandraHost;
 import me.prettyprint.cassandra.service.CassandraHostConfigurator;
-import me.prettyprint.cassandra.service.ThriftKsDef;
 import me.prettyprint.cassandra.service.template.ColumnFamilyResult;
 import me.prettyprint.cassandra.service.template.ColumnFamilyTemplate;
 import me.prettyprint.cassandra.service.template.ColumnFamilyUpdater;
@@ -43,21 +34,12 @@ import me.prettyprint.hector.api.Cluster;
 import me.prettyprint.hector.api.ConsistencyLevelPolicy;
 import me.prettyprint.hector.api.Keyspace;
 import me.prettyprint.hector.api.Serializer;
-import me.prettyprint.hector.api.beans.ColumnSlice;
-import me.prettyprint.hector.api.beans.HColumn;
-import me.prettyprint.hector.api.beans.HCounterColumn;
-import me.prettyprint.hector.api.beans.OrderedRows;
-import me.prettyprint.hector.api.beans.Rows;
-import me.prettyprint.hector.api.ddl.ColumnFamilyDefinition;
-import me.prettyprint.hector.api.ddl.KeyspaceDefinition;
+import me.prettyprint.hector.api.beans.*;
 import me.prettyprint.hector.api.exceptions.HectorException;
 import me.prettyprint.hector.api.factory.HFactory;
 import me.prettyprint.hector.api.mutation.MutationResult;
 import me.prettyprint.hector.api.mutation.Mutator;
-import me.prettyprint.hector.api.query.CounterQuery;
-import me.prettyprint.hector.api.query.MultigetSliceQuery;
-import me.prettyprint.hector.api.query.QueryResult;
-import me.prettyprint.hector.api.query.SliceQuery;
+import me.prettyprint.hector.api.query.*;
 
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
@@ -66,17 +48,13 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 
 import com.google.common.base.Joiner;
-import com.wizecommerce.hecuba.CassandraColumn;
-import com.wizecommerce.hecuba.CassandraParamsBean;
-import com.wizecommerce.hecuba.CassandraResultSet;
-import com.wizecommerce.hecuba.ColumnFamilyInfo;
-import com.wizecommerce.hecuba.HecubaClientManager;
-import com.wizecommerce.hecuba.HecubaConstants;
+import com.wizecommerce.hecuba.*;
+import com.wizecommerce.hecuba.util.ClientManagerUtils;
 import com.wizecommerce.hecuba.util.ConfigUtils;
 
 /**
  * Configuring Hector Clients:
- * <p/>
+ * 
  * com.wizecommerce.hecuba.hectorpools.enable com.nextag.db.cassandra.hectorpools.exhaustedpolicy
  * com.wizecommerce.hecuba.hectorpools.loadbalancingpolicy com.nextag.db.cassandra.hectorpools.maxactive
  * com.wizecommerce.hecuba.hectorpools.maxidle com.nextag.db.cassandra.hectorpools.retrydownedhosts
@@ -96,17 +74,6 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 	protected Serializer<K> keySerializer;
 	protected ThriftColumnFamilyTemplate<String, K> secondaryIndexedColumnFamilyTemplate;
 
-
-	/**
-	 * WARNING: This constructor has been deprecated, please Use {@link HectorBasedHecubaClientManager(com.wizecommerce.hecuba.CassandraParamsBean, me.prettyprint.hector.api.Serializer)} instead
-	 *
-	 */
-	@Deprecated
-	public HectorBasedHecubaClientManager(String clusterName, String locationURL, String ports, String keyspace,
-			String columnFamily, Serializer<K> keySerializer) {
-		super(clusterName, locationURL, ports, keyspace, columnFamily);
-		init(keySerializer);
-	}
 
 	public HectorBasedHecubaClientManager(CassandraParamsBean parameters, Serializer<K> keySerializer) {
 		super(parameters);
@@ -220,58 +187,6 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 	}
 
 	/**
-	 * Creates a keyspace within the cluster.
-	 *
-	 * @param keyspace - name of the keyspace to be created.
-	 */
-	public void createKeyspace(String keyspace) {
-		final ColumnFamilyDefinition cfDef = HFactory.createColumnFamilyDefinition(keyspace, "DynCf");
-		cluster.addKeyspace(new ThriftKsDef(keyspace, "org.apache.cassandra.locator.SimpleStrategy", 1, Arrays.asList(
-				cfDef)));
-	}
-
-	/**
-	 * Removes the keyspace from the cluster.
-	 *
-	 * @param keyspace - name of the keyspace to be removed.
-	 */
-	public void dropKeyspace(String keyspace) {
-		cluster.dropKeyspace(keyspace, true);
-	}
-
-	/**
-	 * @param columnFamilyName - name of the column family to be created.
-	 */
-	public void addColumnFamily(String keyspace, String columnFamilyName) {
-		// First check whether we already have this colum family.
-		KeyspaceDefinition keyspaceDescription = cluster.describeKeyspace(keyspace);
-		if (keyspaceDescription == null) {
-			createKeyspace(keyspace);
-		}
-		keyspaceDescription = cluster.describeKeyspace(keyspace);
-		List<ColumnFamilyDefinition> cfDefs = keyspaceDescription.getCfDefs();
-		if (cfDefs != null) {
-			for (ColumnFamilyDefinition cfDef : cfDefs) {
-				if (cfDef.getName().equals(columnFamilyName)) {
-					return;
-				}
-			}
-		}
-
-		final ColumnFamilyDefinition cfDef = HFactory.createColumnFamilyDefinition(keyspace, columnFamilyName);
-		cluster.addColumnFamily(cfDef);
-	}
-
-	/**
-	 * Removes a column family.
-	 *
-	 * @param columnFamilyName - name of the column family to be removed.
-	 */
-	public void dropColumnFamily(String keyspace, String columnFamilyName) {
-		cluster.dropColumnFamily(keyspace, columnFamilyName);
-	}
-
-	/**
 	 * Deletes a given column value of a row identified by the key.
 	 *
 	 * @param key        - key of the row.
@@ -296,18 +211,7 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 		columnFamily1.deleteColumn(key, columnName);
 	}
 
-	/**
-	 * Deletes an entire row for a given key.
-	 *
-	 * @param key - the key of the row to be deleted.
-	 */
-	public void deleteRow(K key) {
-		deleteRow(key, -1);
-	}
-
 	public void deleteRow(K key, long timestamp) {
-		final ColumnFamilyTemplate<K, String> columnFamily1 = getColumnFamily();
-
 		timestamp = timestamp > 0 ? timestamp : keysp.createClock();
 
 		if (isSecondaryIndexByColumnNameAndValueEnabled || isSecondaryIndexesByColumnNamesEnabled) {
@@ -357,25 +261,7 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 		for (String columnName : row.keySet()) {
 			final Object value = row.get(columnName);
 
-			String valueToInsert = "null";
-
-			if (value != null) {
-
-				if (value instanceof Integer || value instanceof Long || value instanceof Double) {
-					valueToInsert = value.toString();
-				} else if (value instanceof Date) {
-					valueToInsert = HecubaConstants.DATE_FORMATTER.print(((Date) value).getTime());
-				} else if (value instanceof Boolean) {
-					valueToInsert = ((Boolean) value) ? "true" : "false";
-				} else if (value instanceof String) {
-					valueToInsert = (String) value;
-				} else {
-					// TODO:Eran
-					// not sure what to do here. There has to be a serializer to
-					// send this value.
-					valueToInsert = value.toString();
-				}
-			}
+			String valueToInsert = ClientManagerUtils.getInstance().convertValueForStorage(value);
 
 			addInsertionToMutator(key, columnName, valueToInsert, timestampsDefined && timestamps.get(columnName) !=
 					null ? timestamps.get(columnName) : -1, ttlsDefined && ttls.get(columnName) != null ? ttls.get(
@@ -468,7 +354,7 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 		if (secondaryColumnsChanged.size() == 1) {
 			String columnName = secondaryColumnsChanged.get(0);
 			String oldValue = readString(key, columnName);
-			log.info("Updating secondary index for Key = " + key + " column = " + columnName);
+			log.debug("Updating secondary index for Key = " + key + " column = " + columnName);
 			prepareMutatorForSecondaryIndexUpdate(key, allColumnsToBeChanged, secondaryIndexMutator, secondaryIndexCF,
 					columnName, oldValue, ttls);
 		} else {
@@ -583,7 +469,7 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 		// first some fact checking, before going to Cassandra
 		if (isSecondaryIndexByColumnNameAndValueEnabled && Collections.binarySearch(columnsToIndexOnColumnNameAndValue,
 				columnName) >= 0) {
-			return retrieveFromSecodaryIndex(columnName, columnValue);
+			return retrieveFromSecondaryIndex(columnName, columnValue);
 		}
 
 		return null;
@@ -613,16 +499,7 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 		return null;
 	}
 
-	/**
-	 * Enables you to retrieve objects using the mappings found in secondary index table. Its a good idea to make
-	 * sure the given column name and the value are part of a secondary index before doing this call.
-	 *
-	 * @param columnName
-	 * @param columnValue
-	 *
-	 * @return
-	 */
-	private CassandraResultSet<K, String> retrieveFromSecodaryIndex(String columnName, String columnValue) {
+	private CassandraResultSet<K, String> retrieveFromSecondaryIndex(String columnName, String columnValue) {
 		List<K> mappingObjectIds = retrieveKeysFromSecondaryIndex(columnName, columnValue);
 		if (CollectionUtils.isNotEmpty(mappingObjectIds)) {
 			return readAllColumns(new HashSet<K>(mappingObjectIds));
@@ -634,21 +511,16 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 	@Override
 	public CassandraResultSet<K, String> retrieveByColumnNameBasedSecondaryIndex(String columnName) {
 		if (StringUtils.isNotEmpty(columnName) && columnName.matches(secondaryIdxByColumnPattern)) {
-			return retrieveFromSecodaryIndex(columnName, "");
+			return retrieveFromSecondaryIndex(columnName, "");
 		}
 
 		return null;
 	}
 
 
-	/**
-	 * @param parameters
-	 * @param limit      defines the number of **COLUMNS** to return, not the number of rows.
-	 *
-	 * @return
-	 */
 	@Override
 	public CassandraResultSet readAllColumnsBySecondaryIndex(Map<String, String> parameters, int limit) {
+		//TODO: Replace with {@link RangeSlicesQuery}
 		IndexedSlicesQuery<String, String, String> indexedSlicesQuery = HFactory.createIndexedSlicesQuery(keysp,
 				StringSerializer.get(), StringSerializer.get(), StringSerializer.get());
 
@@ -693,14 +565,6 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 	}
 
 
-	/**
-	 * Retrieves all the columns related to a given key.
-	 * Analogous to "Select * from TABLE" in SQL world.
-	 *
-	 * @param key - key of the column to be read.
-	 *
-	 * @return CassandraResultSet (interface to get column values)
-	 */
 	public CassandraResultSet<K, String> readAllColumns(K key) throws HectorException {
 		try {
 			if (maxColumnCount > 0) {
@@ -758,7 +622,7 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 					", Host used = " + queryResult.getHostUsed() + ", Keys = " + Joiner.on(",").join(keys));
 		}
 
-		return new HectorRowSliceResultSet(queryResult);
+		return new HectorRowSliceResultSet<>(queryResult);
 	}
 
 
@@ -791,7 +655,7 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 			}
 			return new HectorResultSet<K, String>(queriedColumns);
 		} catch (HectorException e) {
-			log.info("HecubaClientManager error while retrieving " + columns.size() + " columns for key " +
+			log.error("HecubaClientManager error while retrieving " + columns.size() + " columns for key " +
 					key.toString());
 			if (log.isDebugEnabled()) {
 				log.debug("Caught Exception", e);
@@ -800,14 +664,6 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 		}
 	}
 
-	/**
-	 * Reads the value of a column related to a given key.
-	 *
-	 * @param key        - key of the column to be read.
-	 * @param columnName - name of the column to be read.
-	 *
-	 * @return
-	 */
 	public String readString(K key, String columnName) {
 		HColumn<String, String> result = readColumn(key, columnName);
 		return result == null ? null : result.getValue();
@@ -856,7 +712,7 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 	private void configureHectorSpecificProperties() {
 
 		hectorClientConfiguration = new HectorClientConfiguration();
-		final Configuration configuration = ConfigUtils.getInstance().getInstance().getConfiguration();
+		final Configuration configuration = ConfigUtils.getInstance().getConfiguration();
 		hectorClientConfiguration.setLoadBalancingPolicy(configuration.getString(
 				HecubaConstants.HECTOR_LOAD_BALANCING_POLICY, HecubaConstants.HECTOR_LOAD_BALANCY_POLICIES.DynamicLoadBalancingPolicy.name()));
 		hectorClientConfiguration.setMaxActive(configuration.getInteger(HecubaConstants.HECTOR_MAX_ACTIVE_POOLS, 50));
@@ -892,19 +748,14 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 
 		keysp = HFactory.createKeyspace(keyspace, cluster, consistencyLevel);
 
-		columnFamilyTemplates.add(new ThriftColumnFamilyTemplate<K, String>(keysp, columnFamily, keySerializer,
-				StringSerializer.get()));
+		columnFamilyTemplates.add(new ThriftColumnFamilyTemplate<K, String>(keysp, columnFamily, keySerializer, StringSerializer.get()));
 
 		// now, if we have secondary indexed columns, then go ahead and create its own column family template.
-		if (isSecondaryIndexesByColumnNamesEnabled ||
-				(columnsToIndexOnColumnNameAndValue != null && columnsToIndexOnColumnNameAndValue.size() > 0)) {
-			String secondaryIndexedColumnFamily = ConfigUtils.getInstance().getConfiguration().getString(
-					HecubaConstants.GLOBAL_PROP_NAME_PREFIX + "." + columnFamily + ".secondaryIndexCF",
-					columnFamily + HecubaConstants.SECONDARY_INDEX_CF_NAME_SUFFIX);
-			secondaryIndexedColumnFamilyTemplate = new ThriftColumnFamilyTemplate<String, K>(keysp,
-					secondaryIndexedColumnFamily,
-					StringSerializer.get(),
-					keySerializer);
+		if (isSecondaryIndexesByColumnNamesEnabled || (columnsToIndexOnColumnNameAndValue != null && columnsToIndexOnColumnNameAndValue.size() > 0)) {
+			String secondaryIndexColumnFamilyProperty = HecubaConstants.getSecondaryIndexColumnFamilyProperty(columnFamily);
+			String defaultSecondaryIndexColumnFamily = columnFamily + HecubaConstants.SECONDARY_INDEX_CF_NAME_SUFFIX;
+			String secondaryIndexedColumnFamily = ConfigUtils.getInstance().getConfiguration().getString(secondaryIndexColumnFamilyProperty, defaultSecondaryIndexColumnFamily);
+			secondaryIndexedColumnFamilyTemplate = new ThriftColumnFamilyTemplate<String, K>(keysp, secondaryIndexedColumnFamily, StringSerializer.get(), keySerializer);
 		}
 
 	}
@@ -964,17 +815,8 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 		return columnFamilyTemplates.get(0);
 	}
 
-	@Override
-	public void createKeyspaceAndColumnFamilies(String keyspace, List<ColumnFamilyInfo> columnFamilies) {
-		createKeyspace(keyspace);
-		for (ColumnFamilyInfo columnFamilyInfo : columnFamilies) {
-			addColumnFamily(keyspace, columnFamilyInfo.getName());
-		}
-
-	}
-
 	/**
-	 * Retrieves all the columns for the list of keys. <p/>
+	 * Retrieves all the columns for the list of keys
 	 *
 	 * @param keys - set of keys to retrieve
 	 */
@@ -982,7 +824,7 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 	public CassandraResultSet<K, String> readAllColumns(Set<K> keys) throws HectorException {
 		try {
 			if (maxColumnCount > 0) {
-				return readColumnSlice(keys, null, null, false, maxColumnCount);
+				return readColumnSlice(keys, null, null, false);
 			} else {
 				ColumnFamilyResult<K, String> queriedColumns = getColumnFamily().queryColumns(keys);
 				if (isClientAdapterDebugMessagesEnabled) {
@@ -1003,11 +845,10 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 	}
 
 	@Override
-	public CassandraResultSet<K, String> readColumnSlice(Set<K> keys, String start, String end, boolean reversed,
-			int count) {
+	public CassandraResultSet<K, String> readColumnSlice(Set<K> keys, String start, String end, boolean reversed) {
 		MultigetSliceQuery<K, String, String> multigetSliceQuery = HFactory.createMultigetSliceQuery(keysp,
 				keySerializer, StringSerializer.get(), StringSerializer.get()).setColumnFamily(columnFamily).setRange(
-						start, end, reversed, count).setKeys(keys);
+						start, end, reversed, Integer.MAX_VALUE).setKeys(keys);
 
 		QueryResult<Rows<K, String, String>> queriedResult = multigetSliceQuery.execute();
 

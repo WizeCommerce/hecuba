@@ -38,7 +38,7 @@ public class CassandraParamsBeanTest {
 	    initialBean.setUsername("username");
 	    initialBean.setPassword("secret");
 
-        final CassandraParamsBean deepCopiedBean = initialBean.deepCopy();
+        final CassandraParamsBean deepCopiedBean = new CassandraParamsBean(initialBean);
 	    assertBeans(initialBean, deepCopiedBean);
 
     }

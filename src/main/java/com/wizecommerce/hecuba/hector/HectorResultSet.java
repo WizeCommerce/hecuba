@@ -29,8 +29,8 @@ import java.util.UUID;
  * values retrieved will be strings. But to make the life easy we need to have the same convenience methods to retrieve params as known data types. This class
  * wraps the return ColumnFamilyResult and provides the nice interface devs would like to use.
  * 
- * @param <K>
- * @param <N>
+ * @param <K> key type
+ * @param <N> column type
  * @author ewithana
  */
 

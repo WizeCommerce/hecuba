@@ -1,4 +1,8 @@
 *.swp
-target
 *.iml
+target
 .idea
+.classpath
+.project
+.settings/
+*.out

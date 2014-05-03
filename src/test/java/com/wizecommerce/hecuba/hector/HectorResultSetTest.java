@@ -15,8 +15,10 @@
 package com.wizecommerce.hecuba.hector;
 
 import com.wizecommerce.hecuba.HecubaConstants;
+
 import me.prettyprint.cassandra.service.CassandraHost;
 import me.prettyprint.cassandra.service.template.ColumnFamilyResult;
+
 import org.apache.commons.collections.CollectionUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,7 +42,8 @@ public class HectorResultSetTest {
     private ColumnFamilyResult<Long, String> resultsSet;
     private HectorResultSet<Long, String> hectorResultSet;
 
-    @Before
+    @SuppressWarnings("unchecked")
+	@Before
     public void setup() {
         resultsSet = mock(ColumnFamilyResult.class);
         hectorResultSet = new HectorResultSet<Long, String>(resultsSet);

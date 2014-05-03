@@ -14,15 +14,15 @@
 
 package com.wizecommerce.hecuba;
 
-import com.wizecommerce.hecuba.astyanax.AstyanaxBasedCassandraManagerTest;
-import com.wizecommerce.hecuba.hector.HectorBasedCassandraManagerTest;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import org.junit.runners.Suite.SuiteClasses;
 
-@RunWith(Suite.class)
-@SuiteClasses({ AstyanaxBasedCassandraManagerTest.class,
-		HectorBasedCassandraManagerTest.class })
-public class AllCassandraIntegrationTestsSuite {
+import com.wizecommerce.hecuba.astyanax.AstyanaxBasedCassandraManagerTest;
+import com.wizecommerce.hecuba.datastax.DataStaxBasedCassandraManagerTest;
+import com.wizecommerce.hecuba.hector.HectorBasedCassandraManagerTest;
 
+@RunWith(Suite.class)
+@SuiteClasses({ AstyanaxBasedCassandraManagerTest.class, HectorBasedCassandraManagerTest.class, DataStaxBasedCassandraManagerTest.class })
+public class AllCassandraIntegrationTestsSuite {
 }

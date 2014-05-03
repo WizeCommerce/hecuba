@@ -14,11 +14,14 @@
 
 package com.wizecommerce.hecuba.hector;
 
-import com.wizecommerce.hecuba.HecubaConstants;
-import com.wizecommerce.hecuba.util.ConfigUtils;
 import me.prettyprint.cassandra.service.OperationType;
 import me.prettyprint.hector.api.ConsistencyLevelPolicy;
 import me.prettyprint.hector.api.HConsistencyLevel;
+
+import org.apache.commons.lang3.StringUtils;
+
+import com.wizecommerce.hecuba.HecubaConstants;
+import com.wizecommerce.hecuba.util.ConfigUtils;
 
 public class HectorConsistencyPolicy implements ConsistencyLevelPolicy {
 
@@ -32,29 +35,24 @@ public class HectorConsistencyPolicy implements ConsistencyLevelPolicy {
 
 	private HConsistencyLevel configureConsistencyLevel(String columnFamilyName, String operation) {
 		// first get the default consistency policy.
-		String consistencyParameter = ConfigUtils.getInstance().getConfiguration().getString(
-				HecubaConstants.GLOBAL_PROP_NAME_PREFIX +
-						".consistencypolicy." + operation, "ONE");
+		String[] consistencyPolicyProperties = HecubaConstants.getConsistencyPolicyProperties(columnFamilyName, operation);
+		String consistencyParameter = "ONE";
+		for (String property : consistencyPolicyProperties) {
+			consistencyParameter = ConfigUtils.getInstance().getConfiguration().getString(property, consistencyParameter);
+		}
 
-		// now check whether we have column family specific consistency parameter.
-		consistencyParameter = ConfigUtils.getInstance().getConfiguration().getString(
-				HecubaConstants.GLOBAL_PROP_NAME_PREFIX + "." + columnFamilyName + ".consistencypolicy." +
-						operation,
-				consistencyParameter);
-
-		return consistencyParameter == null || "".equals(consistencyParameter) ? HConsistencyLevel.ONE :
-				HConsistencyLevel.valueOf(consistencyParameter);
+		return StringUtils.isEmpty(consistencyParameter) ? HConsistencyLevel.ONE : HConsistencyLevel.valueOf(consistencyParameter);
 	}
 
 	@Override
 	public HConsistencyLevel get(OperationType operationType) {
 		switch (operationType) {
-			case READ:
-				return readConsistency;
-			case WRITE:
-				return writeConsistency;
-			default:
-				return HConsistencyLevel.ONE; // Just in Case
+		case READ:
+			return readConsistency;
+		case WRITE:
+			return writeConsistency;
+		default:
+			return HConsistencyLevel.ONE; // Just in Case
 		}
 	}
 
@@ -64,5 +62,4 @@ public class HectorConsistencyPolicy implements ConsistencyLevelPolicy {
 		// So call the above method in here as well.
 		return get(operationType);
 	}
-
 }

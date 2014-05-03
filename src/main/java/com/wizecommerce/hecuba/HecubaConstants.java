@@ -17,13 +17,14 @@
  */
 package com.wizecommerce.hecuba;
 
-import com.google.common.base.Joiner;
 import org.joda.time.format.DateTimeFormat;
 import org.joda.time.format.DateTimeFormatter;
 
+import com.google.common.base.Joiner;
+
 /**
  * @author - Eran Chinthaka Withana
- * @date - Sep 12, 2011
+ * @version - Sep 12, 2011
  */
 public abstract class HecubaConstants {
 
@@ -31,11 +32,10 @@ public abstract class HecubaConstants {
 
 	public static final String GLOBAL_PROP_NAME_PREFIX = "com.wizecommerce.hecuba";
 
-
-	public static final String HECUBA_CASSANDRA_CLIENT_IMPLEMENTATION_MANAGER = getPropertyName("hecuba.cassandraclientmanager");
+	public static final String HECUBA_CASSANDRA_CLIENT_IMPLEMENTATION_MANAGER = getPropertyName("cassandraclientmanager");
 
 	public static enum CassandraClientImplementation {
-		HECTOR, ASTYANAX
+		HECTOR, ASTYANAX, DATASTAX
 	}
 
 	public static DateTimeFormatter DATE_FORMATTER = DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z");
@@ -71,17 +71,31 @@ public abstract class HecubaConstants {
 	public static final String HECTOR_RETRY_DOWN_HOST_DELAY = getPropertyName("hectorpools.retrydownedhostsinseconds");
 	public static final String HECTOR_THRIFT_SOCKET_TIMEOUT = getPropertyName("hectorpools.thriftsockettimeout");
 	public static final String HECTOR_USE_THRIFT_FRAME_TRANSPORT = getPropertyName("hectorpools.usethriftframedtransport");
-
+	
+	/***************************
+	 * DataStax Specific Options
+	 *****************************/
+	public static final String DATASTAX_CONNECT_TIMEOUT = getPropertyName("datastax.socket.ConnectTimeout");
+	public static final String DATASTAX_READ_TIMEOUT = getPropertyName("datastax.socket.ReadTimeout");
+	public static final String DATASTAX_MAX_CONNECTIONS_PER_HOST = getPropertyName("datastax.pool.MaxConnectionsPerHost");
+	public static final String DATASTAX_COMPRESSION_ENABLED = getPropertyName("datastax.CompressionEnabled");
+	public static final String DATASTAX_DATACENTER = getPropertyName("datastax.Datacenter");
+	public static final String DATASTAX_STATEMENT_CACHE_MAX_SIZE = getPropertyName("datastax.statement.CacheMaxSize");
+	
 
 	public static enum HECTOR_LOAD_BALANCY_POLICIES {
-		LeastActiveBalancingPolicy,
-		DynamicLoadBalancingPolicy,
-		RoundRobinBalancingPolicy,
+		LeastActiveBalancingPolicy, DynamicLoadBalancingPolicy, RoundRobinBalancingPolicy,
 	}
 
 	private static String getPropertyName(String postfix) {
 		return dotJoiner.join(GLOBAL_PROP_NAME_PREFIX, postfix);
 	}
 
-
+	public static String[] getConsistencyPolicyProperties(String columnFamily, String operation) {
+		return new String[] { getPropertyName(dotJoiner.join("consistencypolicy", operation)), getPropertyName(dotJoiner.join(columnFamily, "consistencypolicy", operation)) };
+	}
+	
+	public static String getSecondaryIndexColumnFamilyProperty(String columnFamily) {
+		return getPropertyName(dotJoiner.join(columnFamily, "secondaryIndexCF"));
+	}
 }
