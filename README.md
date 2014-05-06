@@ -40,7 +40,7 @@ Usage
     HecubaClientManager<String> cassandraManager = new AstyanaxBasedHecubaClientManager<String>(parameters, com.netflix.astyanax.serializer.StringSerializer.get());
 
     // or initialize a client based on Hector
-    HecubaClientManager<String> cassandraManager = new HectorBasedHecubaClientManager<String>(parameters, me.prettyprint.cassandra.serializers.StringSerializer.get(), true);
+    HecubaClientManager<String> cassandraManager = new HectorBasedHecubaClientManager<String>(parameters, me.prettyprint.cassandra.serializers.StringSerializer.get());
 ```
 
 ### Write data
