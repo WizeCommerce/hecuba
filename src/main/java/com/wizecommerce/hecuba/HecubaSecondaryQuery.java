@@ -25,13 +25,16 @@ import java.util.Map;
 /**
  *  Object is used to query cassandra for secondary index.
  *
- *  @param parameters defines a map of columnname->value mapping that it should
- *  query against.
- *  @param limit defines the number of columns to return.
- *
  */
 public class HecubaSecondaryQuery {
+	/**
+	 * defines a map of columnname to value mapping that it should query against.
+	 */
 	final Map<String, Object> parameters;
+	
+	/**
+	 * defines the number of columns to return.
+	 */
 	final Integer limit;
 
 	public Integer getLimit() {

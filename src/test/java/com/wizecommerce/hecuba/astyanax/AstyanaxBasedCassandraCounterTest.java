@@ -19,19 +19,7 @@ import com.wizecommerce.hecuba.CassandraCounterTestBase;
 import com.wizecommerce.hecuba.CassandraParamsBean;
 import com.wizecommerce.hecuba.HecubaClientManager;
 
-import java.io.IOException;
-
 public class AstyanaxBasedCassandraCounterTest extends CassandraCounterTestBase {
-
-	public AstyanaxBasedCassandraCounterTest() throws IOException {
-		super(AstyanaxBasedCassandraCounterTest.class.getName());
-	}
-
-	public HecubaClientManager<Long> getHecubaClientManager(String clusterName, String locationURL, String ports,
-															String keyspace, String columnFamily) {
-		return new AstyanaxBasedHecubaClientManager<Long>(clusterName, locationURL, ports, keyspace, columnFamily,
-				LongSerializer.get());
-	}
 
 	public HecubaClientManager<Long> getHecubaClientManager(CassandraParamsBean paramsBean) {
 		return new AstyanaxBasedHecubaClientManager<Long>(paramsBean, LongSerializer.get());

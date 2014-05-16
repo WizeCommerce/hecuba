@@ -29,16 +29,8 @@
 package com.wizecommerce.hecuba.astyanax;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
-import com.netflix.astyanax.connectionpool.impl.SimpleAuthenticationCredentials;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.configuration.Configuration;
@@ -46,41 +38,23 @@ import org.apache.commons.lang.StringUtils;
 import org.apache.commons.lang.exception.ExceptionUtils;
 
 import com.google.common.base.Joiner;
-import com.netflix.astyanax.AstyanaxContext;
-import com.netflix.astyanax.Clock;
-import com.netflix.astyanax.Cluster;
-import com.netflix.astyanax.ColumnListMutation;
-import com.netflix.astyanax.Keyspace;
-import com.netflix.astyanax.MutationBatch;
-import com.netflix.astyanax.Serializer;
+import com.netflix.astyanax.*;
 import com.netflix.astyanax.clock.ClockType;
 import com.netflix.astyanax.connectionpool.Host;
 import com.netflix.astyanax.connectionpool.HostStats;
 import com.netflix.astyanax.connectionpool.NodeDiscoveryType;
 import com.netflix.astyanax.connectionpool.OperationResult;
 import com.netflix.astyanax.connectionpool.exceptions.ConnectionException;
-import com.netflix.astyanax.connectionpool.impl.ConnectionPoolConfigurationImpl;
-import com.netflix.astyanax.connectionpool.impl.ConnectionPoolType;
-import com.netflix.astyanax.connectionpool.impl.CountingConnectionPoolMonitor;
-import com.netflix.astyanax.connectionpool.impl.SmaLatencyScoreStrategyImpl;
-import com.netflix.astyanax.ddl.KeyspaceDefinition;
+import com.netflix.astyanax.connectionpool.impl.*;
 import com.netflix.astyanax.impl.AstyanaxConfigurationImpl;
-import com.netflix.astyanax.model.Column;
-import com.netflix.astyanax.model.ColumnFamily;
-import com.netflix.astyanax.model.ColumnList;
-import com.netflix.astyanax.model.Row;
-import com.netflix.astyanax.model.Rows;
+import com.netflix.astyanax.model.*;
 import com.netflix.astyanax.query.ColumnQuery;
 import com.netflix.astyanax.query.PreparedIndexExpression;
 import com.netflix.astyanax.query.RowQuery;
 import com.netflix.astyanax.serializers.StringSerializer;
 import com.netflix.astyanax.thrift.ThriftFamilyFactory;
-import com.wizecommerce.hecuba.CassandraColumn;
-import com.wizecommerce.hecuba.CassandraParamsBean;
-import com.wizecommerce.hecuba.CassandraResultSet;
-import com.wizecommerce.hecuba.ColumnFamilyInfo;
-import com.wizecommerce.hecuba.HecubaClientManager;
-import com.wizecommerce.hecuba.HecubaConstants;
+import com.wizecommerce.hecuba.*;
+import com.wizecommerce.hecuba.util.ClientManagerUtils;
 import com.wizecommerce.hecuba.util.ConfigUtils;
 
 
@@ -103,17 +77,6 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 
 	public AstyanaxBasedHecubaClientManager() {
 
-	}
-
-	public AstyanaxBasedHecubaClientManager(String clusterName, String locationUrls, String port, String keyspaceName,
-			String columnFamily, Serializer<K> keySerializer) {
-
-		super(clusterName, locationUrls, port, keyspaceName, columnFamily);
-
-		initialize(clusterName, locationUrls, port, keyspaceName);
-
-		this.columnFamily = new ColumnFamily<K, String>(columnFamily, keySerializer, StringSerializer.get());
-		this.keySerializer = keySerializer;
 	}
 
 	public AstyanaxBasedHecubaClientManager(CassandraParamsBean parameters, Serializer<K> keySerializer) {
@@ -240,12 +203,6 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		}
 	}
 
-	@Override
-	public void createKeyspace(String keyspace) {
-
-		createKeyspaceAndColumnFamilies(keyspace, null);
-	}
-
 	public AstyanaxContext<Cluster> initiateClusterContext(String clusterName) {
 		clusterContext = new AstyanaxContext.Builder().forCluster(clusterName).withAstyanaxConfiguration(
 				new AstyanaxConfigurationImpl()).withConnectionPoolConfiguration(new ConnectionPoolConfigurationImpl(
@@ -255,46 +212,6 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 
 		clusterContext.start();
 		return clusterContext;
-	}
-
-	@Override
-	public void dropKeyspace(String keyspace) {
-		try {
-			clusterContext.getEntity().dropKeyspace(keyspace);
-		} catch (ConnectionException e) {
-			log.warn("Couldn't drop the keyspace");
-		}
-
-	}
-
-	@Override
-	public void addColumnFamily(String keyspace, String columnFamilyName) {
-		try {
-			if (keyspace != null) {
-
-				clusterContext.getEntity().addColumnFamily(
-						clusterContext.getEntity().makeColumnFamilyDefinition().setName(columnFamilyName)
-						.setComparatorType("UTF8Type").setKeyValidationClass("UTF8Type"));
-				Thread.sleep(2000);
-
-			}
-		} catch (ConnectionException e) {
-			log.warn(String.format("Couldn't add column family %s under %s keyspace", columnFamilyName, keyspace), e);
-		} catch (InterruptedException e) {
-			log.warn(String.format("Couldn't add column family %s under %s keyspace", columnFamilyName, keyspace), e);
-		}
-
-	}
-
-	@Override
-	public void dropColumnFamily(String keyspace, String columnFamilyName) {
-		try {
-			if (keyspace != null && clusterContext != null) {
-				clusterContext.getEntity().dropColumnFamily(keyspace, columnFamilyName);
-			}
-		} catch (ConnectionException e) {
-			log.warn(String.format("Couldn't drop column family %s under %s keyspace", columnFamilyName, keyspace), e);
-		}
 	}
 
 	@Override
@@ -316,25 +233,7 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 			// we will set the ttls if defined, if we pass that as null so that internally it will NOT set the ttls.
 			final Integer ttl = ttls == null ? null : ttls.get(columnName);
 
-			String valueToInsert = "null";
-
-			if (value != null) {
-
-				if (value instanceof Integer || value instanceof Long || value instanceof Double) {
-					valueToInsert = value.toString();
-				} else if (value instanceof Date) {
-					valueToInsert = HecubaConstants.DATE_FORMATTER.print(((Date) value).getTime());
-				} else if (value instanceof Boolean) {
-					valueToInsert = ((Boolean) value) ? "true" : "false";
-				} else if (value instanceof String) {
-					valueToInsert = (String) value;
-				} else {
-					// TODO:Eran
-					// not sure what to do here. There has to be a serializer to
-					// send this value.
-					valueToInsert = value.toString();
-				}
-			}
+			String valueToInsert = ClientManagerUtils.getInstance().convertValueForStorage(value);
 
 			// if timestamps are set, pass that on to the columnListMutation. The tricky thing here is once you set
 			// a timestamp that will be used from that point beyond. So if a timestamp is NOT defined at least for one
@@ -546,11 +445,6 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 	}
 
 	@Override
-	public void deleteRow(K key) {
-		deleteRow(key, -1);
-	}
-
-	@Override
 	public void deleteRow(K key, long timestamp) {
 		try {
 			MutationBatch m = keyspace.prepareMutationBatch();
@@ -650,45 +544,6 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 	}
 
 	@Override
-	public void createKeyspaceAndColumnFamilies(String keyspace, List<ColumnFamilyInfo> columnFamilies) {
-		AstyanaxContext<Cluster> clusterContext = initiateClusterContext(clusterName);
-		try {
-			Cluster cluster = clusterContext.getEntity();
-
-			Map<String, String> stratOptions = new HashMap<String, String>();
-			stratOptions.put("replication_factor", "1");
-
-			KeyspaceDefinition ksDef = cluster.makeKeyspaceDefinition();
-
-			ksDef.setName(keyspace).setStrategyOptions(stratOptions).setStrategyClass("SimpleStrategy");
-
-			if (columnFamilies != null) {
-				for (ColumnFamilyInfo columnFamilyInfo : columnFamilies) {
-					ksDef.addColumnFamily(cluster.makeColumnFamilyDefinition().setName(columnFamilyInfo.getName())
-							.setComparatorType(columnFamilyInfo.getComparatorType())
-							.setKeyValidationClass(columnFamilyInfo.getKeyValidationClass())
-							.setDefaultValidationClass(
-									columnFamilyInfo.getDefaultValidationClass()));
-				}
-			}
-
-			cluster.addKeyspace(ksDef);
-
-			Thread.sleep(2000);
-
-			initialize(clusterName, locationURLs, ports, keyspace);
-
-		} catch (ConnectionException e) {
-			log.error("Error creating keyspace and CFs, " + keyspace + ", " + columnFamilies, e);
-		} catch (InterruptedException e) {
-			log.error("Thread interrupted while creating keyspace and CFs, " + keyspace + ", " + columnFamilies, e);
-		} finally {
-			clusterContext.shutdown();
-		}
-
-	}
-
-	@Override
 	public CassandraResultSet<K, String> readColumns(K key, List<String> columnName) throws Exception {
 		final OperationResult<ColumnList<String>> operationResult = keyspace.prepareQuery(columnFamily).getKey(key)
 				.withColumnSlice(columnName).execute();
@@ -741,12 +596,11 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 	}
 
 	@Override
-	public CassandraResultSet<K, String> readColumnSlice(Set<K> keys, String start, String end, boolean reversed,
-			int count) {
+	public CassandraResultSet<K, String> readColumnSlice(Set<K> keys, String start, String end, boolean reversed) {
 		try {
 			final OperationResult<Rows<K, String>> rowSliceQueryResult = keyspace.prepareQuery(columnFamily)
 					.getKeySlice(keys).withColumnRange(
-							start, end, reversed, count).execute();
+							start, end, reversed, Integer.MAX_VALUE).execute();
 			return new AstyanaxResultSet<K, String>(rowSliceQueryResult);
 		} catch (ConnectionException e) {
 			log.warn("error while executing a row slice query ", e);

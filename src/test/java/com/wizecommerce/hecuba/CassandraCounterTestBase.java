@@ -14,43 +14,35 @@
 
 package com.wizecommerce.hecuba;
 
-import com.wizecommerce.hecuba.util.CassandraTestBase;
-import org.junit.Test;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static junit.framework.Assert.assertEquals;
-import static junit.framework.Assert.assertTrue;
+import org.junit.Test;
+
+import com.wizecommerce.hecuba.util.CassandraTestBase;
 
 /**
  * 
- * NOTE: 
- * All counters should have CounterColumnType column value type. Therefore the map returned in 
- * getColumnValueTypeOverrides() must include all methods names that tests counters.
- * Also, update the list returned in getSecondaryIndexExcludeList() appropriately.
- *
+ * NOTE: All counters should have CounterColumnType column value type. Therefore the map returned in getColumnValueTypeOverrides() must include all methods names that tests
+ * counters. Also, update the list returned in getSecondaryIndexExcludeList() appropriately.
+ * 
  */
 public abstract class CassandraCounterTestBase extends CassandraTestBase {
 
-	protected CassandraCounterTestBase(String className) throws IOException {
-		super(className);
-	}
-
 	@Test
 	public void testCounterUpdate() {
-		String columnFamily = "testCounterUpdate";
+		HecubaClientManager<Long> cassandraManager = getHecubaClientManager();
 
-		HecubaClientManager<Long> cassandraManager = getHecubaClientManager(columnFamily);
-
-		//Update counter with value 5
+		// Update counter with value 5
 		cassandraManager.updateCounter(1122L, "test_column_0", 5L);
 		// Now the value should be 5
 		assertEquals(new Long(5), cassandraManager.getCounterValue(1122L, "test_column_0"));
-		
+
 		// Update counter with value 1
 		cassandraManager.updateCounter(1234L, "test_column_1", 1L);
 		// Since there was no such counter earlier the value should be 1
@@ -63,12 +55,12 @@ public abstract class CassandraCounterTestBase extends CassandraTestBase {
 		cassandraManager.updateCounter(1234L, "test_column_1", -1L);
 		// Now the value should be 2
 		assertEquals(new Long(2), cassandraManager.getCounterValue(1234L, "test_column_1"));
-		//Update counter with 0
+		// Update counter with 0
 		cassandraManager.updateCounter(1234L, "test_column_1", 0L);
-		//Now the value should still be 2
+		// Now the value should still be 2
 		assertEquals(new Long(2), cassandraManager.getCounterValue(1234L, "test_column_1"));
-		
-		//Update another counter with 0
+
+		// Update another counter with 0
 		cassandraManager.updateCounter(1111L, "test_column_2", 0L);
 		// Now the value should be 0
 		assertEquals(new Long(0), cassandraManager.getCounterValue(1111L, "test_column_2"));
@@ -76,9 +68,7 @@ public abstract class CassandraCounterTestBase extends CassandraTestBase {
 
 	@Test
 	public void testDeleteCounterColumn() {
-		String columnFamily = "testDeleteCounterColumn";
-
-		HecubaClientManager<Long> cassandraManager = getHecubaClientManager(columnFamily);
+		HecubaClientManager<Long> cassandraManager = getHecubaClientManager();
 		// Set a counter
 		cassandraManager.updateCounter(1234L, "test_column_1", 1L);
 		// Check the value
@@ -86,71 +76,64 @@ public abstract class CassandraCounterTestBase extends CassandraTestBase {
 
 		// Delete the counter
 		cassandraManager.deleteColumn(1234L, "test_column_1");
-		//Now the value should be 0
+		// Now the value should be 0
 		assertEquals(new Long(0), cassandraManager.getCounterValue(1234L, "test_column_1"));
 	}
 
 	@Test
 	public void testReadNonExistentCounterColumn() {
-		String columnFamily = "testReadNonExistentCounterColumn";
+		HecubaClientManager<Long> cassandraManager = getHecubaClientManager();
 
-		HecubaClientManager<Long> cassandraManager = getHecubaClientManager(columnFamily);
-		
-		//Reading a counter that does not exist
+		// Reading a counter that does not exist
 		assertEquals(new Long(0), cassandraManager.getCounterValue(1234L, "test_column_1"));
 	}
-	
+
 	@Test
 	public void testIncrementCounter() {
-		String columnFamily = "testIncrementCounter";
+		HecubaClientManager<Long> cassandraManager = getHecubaClientManager();
 
-		HecubaClientManager<Long> cassandraManager = getHecubaClientManager(columnFamily);
-		
-		//Created a new counter with the starting value 10
+		// Created a new counter with the starting value 10
 		cassandraManager.updateCounter(1111L, "test_column_0", 10);
-		//Value must be 10
+		// Value must be 10
 		assertEquals(new Long(10), cassandraManager.getCounterValue(1111L, "test_column_0"));
-		//Increment counter
+		// Increment counter
 		cassandraManager.incrementCounter(1111L, "test_column_0");
-		//Value must be 11
+		// Value must be 11
 		assertEquals(new Long(11), cassandraManager.getCounterValue(1111L, "test_column_0"));
-		
-		//Increment a counter that does not exist
+
+		// Increment a counter that does not exist
 		cassandraManager.incrementCounter(1234L, "test_column_1");
-		//Value should be 1
+		// Value should be 1
 		assertEquals(new Long(1), cassandraManager.getCounterValue(1234L, "test_column_1"));
-		//Increment again
+		// Increment again
 		cassandraManager.incrementCounter(1234L, "test_column_1");
-		//Now the value should be 2
+		// Now the value should be 2
 		assertEquals(new Long(2), cassandraManager.getCounterValue(1234L, "test_column_1"));
 	}
 
 	@Test
 	public void testDecrementCounter() {
-		String columnFamily = "testDecrementCounter";
+		HecubaClientManager<Long> cassandraManager = getHecubaClientManager();
 
-		HecubaClientManager<Long> cassandraManager = getHecubaClientManager(columnFamily);
-		
-		//Created a new counter with the starting value 10
+		// Created a new counter with the starting value 10
 		cassandraManager.updateCounter(1111L, "test_column_0", 10);
-		//Value must be 10
+		// Value must be 10
 		assertEquals(new Long(10), cassandraManager.getCounterValue(1111L, "test_column_0"));
-		//Increment counter
+		// Increment counter
 		cassandraManager.decrementCounter(1111L, "test_column_0");
-		//Value must be 11
+		// Value must be 11
 		assertEquals(new Long(9), cassandraManager.getCounterValue(1111L, "test_column_0"));
-		
-		//Decrement a counter that does not exist
+
+		// Decrement a counter that does not exist
 		cassandraManager.decrementCounter(1234L, "test_column_1");
-		//Reading a counter that does not exist
+		// Reading a counter that does not exist
 		assertEquals(new Long(-1), cassandraManager.getCounterValue(1234L, "test_column_1"));
-		//Decrement again
+		// Decrement again
 		cassandraManager.decrementCounter(1234L, "test_column_1");
-		//Now the value should be -2
+		// Now the value should be -2
 		assertEquals(new Long(-2), cassandraManager.getCounterValue(1234L, "test_column_1"));
 	}
-	
-	
+
 	/**
 	 * None of these test should have a secondary index test
 	 */

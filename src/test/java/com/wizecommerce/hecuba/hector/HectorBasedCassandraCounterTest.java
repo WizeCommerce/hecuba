@@ -14,24 +14,13 @@
 
 package com.wizecommerce.hecuba.hector;
 
+import me.prettyprint.cassandra.serializers.LongSerializer;
+
 import com.wizecommerce.hecuba.CassandraCounterTestBase;
 import com.wizecommerce.hecuba.CassandraParamsBean;
 import com.wizecommerce.hecuba.HecubaClientManager;
-import me.prettyprint.cassandra.serializers.LongSerializer;
-
-import java.io.IOException;
 
 public class HectorBasedCassandraCounterTest extends CassandraCounterTestBase {
-
-	public HectorBasedCassandraCounterTest() throws IOException {
-		super(HectorBasedCassandraCounterTest.class.getName());
-	}
-
-	public HecubaClientManager<Long> getHecubaClientManager(String clusterName, String locationURL, String ports,
-															String keyspace, String columnFamily) {
-		return new HectorBasedHecubaClientManager<Long>(clusterName, locationURL, ports, keyspace, columnFamily,
-				LongSerializer.get());
-	}
 
 	public HecubaClientManager<Long> getHecubaClientManager(CassandraParamsBean paramsBean) {
 		return new HectorBasedHecubaClientManager<Long>(paramsBean, LongSerializer.get());

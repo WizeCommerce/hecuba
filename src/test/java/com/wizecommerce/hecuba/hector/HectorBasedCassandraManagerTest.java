@@ -14,35 +14,24 @@
 
 package com.wizecommerce.hecuba.hector;
 
+import java.util.Map;
+
+import me.prettyprint.cassandra.serializers.LongSerializer;
+
 import com.wizecommerce.hecuba.CassandraParamsBean;
 import com.wizecommerce.hecuba.HecubaCassandraManagerTestBase;
 import com.wizecommerce.hecuba.HecubaClientManager;
-import me.prettyprint.cassandra.serializers.LongSerializer;
-import org.mortbay.util.MultiMap;
-
-import java.io.IOException;
 
 public class HectorBasedCassandraManagerTest extends HecubaCassandraManagerTestBase {
 
-	public HectorBasedCassandraManagerTest() throws IOException {
-		super(HectorBasedCassandraManagerTest.class.getName());
-	}
-
 	@Override
-	protected MultiMap getData(String columnFamilyName) {
+	protected Map<String, Map<String, Object>> getData(String columnFamilyName) {
 		return null;
 	}
 
 	@Override
 	protected void tearDown() {
 
-	}
-
-	public HecubaClientManager<Long> getHecubaClientManager(String clusterName, String locationURL, String ports,
-															String keyspace, String columnFamily) {
-		return new HectorBasedHecubaClientManager<Long>(clusterName,
-														   locationURL, ports, keyspace, columnFamily,
-														   LongSerializer.get() );
 	}
 
 	public HecubaClientManager<Long> getHecubaClientManager(CassandraParamsBean paramsBean) {

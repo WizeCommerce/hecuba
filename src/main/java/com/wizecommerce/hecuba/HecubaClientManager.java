@@ -15,13 +15,7 @@
 package com.wizecommerce.hecuba;
 
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.commons.lang.StringUtils;
 import org.apache.log4j.Logger;
@@ -31,10 +25,10 @@ import com.wizecommerce.hecuba.util.ConfigUtils;
 /**
  * This is a convenience class that will enable a user to interact with Column Families. It is
  * assumed that all the column names are strings.
- * <p/>
+ * 
  * This is a stateful implementation of the Cassandra manager. The parameters set either in the constructor and/or
  * setter methods will be used to carry our update/read/delete operations.
- * <p/>
+ * 
  *
  * @author - Eran Chinthaka Withana
  */
@@ -60,23 +54,23 @@ public abstract class HecubaClientManager<K> {
 
 	/**
 	 * Secondary Index Implementation ==============================
-	 * <p/>
+	 * 
 	 * We tried to use Cassandra's in-built secondary indexes but it ended up in tears as these hidden secondary
 	 * indexes
 	 * sometimes didn't return proper results. Even more than that some of the results were intermittent, meaning the
 	 * same request works and not works sometimes.
-	 * <p/>
+	 * 
 	 * Due to this complication, we decided to maintain our own secondary indexes as of 14th November, 2012.
-	 * <p/>
+	 * 
 	 * In this implementation, each object has its own column family to store the secondary indexes. During a writing,
 	 * we intercept those calls and check whether its a change to the secondary index. If it is, then we will delete
 	 * the
 	 * previous entry, if any, and create a new entry in the table mapping the new secondary index to the original
 	 * object.
-	 * <p/>
+	 * 
 	 * In the read path, we will provide a new method, retrieveBySecondaryIndex(String columnName, String
 	 * value):List&lt;String&gt;, where the list contains the set of ids linking to the main table.
-	 * <p/>
+	 * 
 	 * Features: + we will be able to have indexes for any number of columns + the implementation of secondary indexes
 	 * will be hidden from the client and he/she has to do minimal amount of work to get it working
 	 */
@@ -182,13 +176,13 @@ public abstract class HecubaClientManager<K> {
 	/**
 	 * This method will give the user more power to control what goes into Cassandra. With every column insert, one can
 	 * specify four different parameters.
-	 * <p/>
+	 * 
 	 * <ol> <li>Column name</li> <li>Column value</li> <li>Timestamp - this, if not specified, is set by our client
 	 * library. </li> <li>Time To Live (TTL) - this, if not specified, is set to be indefinite.</li> </ol>
-	 * <p/>
+	 * 
 	 * This method allows one to specify all the above parameters, but @link updateString(K key, String columnName,
 	 * String value) will set the defaults to ttl and timestamps.
-	 * <p/>
+	 * 
 	 * Also, if you want to set only parameters and not care about the other, feel free to set the value to -1 or any
 	 * negative value so that we will detect it and set the default values. For example,  you can invoke this method
 	 * with updateString(1234, "MyColumn", "MyValue", -1, 22211). This will only set the given ttl but use the client
@@ -211,13 +205,9 @@ public abstract class HecubaClientManager<K> {
 	 */
 	public abstract void updateByteBuffer(K key, String columnName, ByteBuffer value);
 
-	public abstract void createKeyspace(String keyspace);
-
-	public abstract void createKeyspaceAndColumnFamilies(String keyspace, List<ColumnFamilyInfo> columnFamilies);
-
 	/**
 	 * Updates the value of the column in the given row (identified by the key).
-	 * <p/>
+	 * 
 	 * Note that the value will be converted to a String before storing in Cassandra.
 	 *
 	 * @param key        - key to identify the row.
@@ -230,7 +220,7 @@ public abstract class HecubaClientManager<K> {
 
 	/**
 	 * Updates the value of the column in the given row (identified by the key).
-	 * <p/>
+	 * 
 	 * Note that the value will be converted to a String before storing in Cassandra.
 	 *
 	 * @param key        - key to identify the row.
@@ -243,7 +233,7 @@ public abstract class HecubaClientManager<K> {
 
 	/**
 	 * Updates the value of the column in the given row (identified by the key).
-	 * <p/>
+	 * 
 	 * Note that the value will be converted to a String before storing in Cassandra.
 	 *
 	 * @param key        - key to identify the row.
@@ -256,7 +246,7 @@ public abstract class HecubaClientManager<K> {
 
 	/**
 	 * Updates the value of the column in the given row (identified by the key).
-	 * <p/>
+	 * 
 	 * Note that the value will be converted to a String before storing in Cassandra.
 	 *
 	 * @param key        - key to identify the row.
@@ -269,7 +259,7 @@ public abstract class HecubaClientManager<K> {
 
 	/**
 	 * Updates the value of the column in the given row (identified by the key).
-	 * <p/>
+	 * 
 	 * Note that the value will be converted to a String before storing in Cassandra.
 	 *
 	 * @param key        - key to identify the row.
@@ -280,30 +270,11 @@ public abstract class HecubaClientManager<K> {
 		updateString(key, columnName, value.toString());
 	}
 
-	/**
-	 * Removes the keyspace from the cluster.
-	 *
-	 * @param keyspace - name of the keyspace to be removed.
-	 */
-	public abstract void dropKeyspace(String keyspace);
-
-	/**
-	 * @param columnFamilyName - name of the column family to be created.
-	 */
-	public abstract void addColumnFamily(String keyspace, String columnFamilyName);
-
-	/**
-	 * Removes a column family.
-	 *
-	 * @param columnFamilyName - name of the column family to be removed.
-	 */
-	public abstract void dropColumnFamily(String keyspace, String columnFamilyName);
-
 	// ====================================================================================
 
 	/**
 	 * Updates a complete row and uses the same timestamp.
-	 * <p/>
+	 * 
 	 * Note: We are pushing even the columns with null values by putting "null" string to those corresponding columns.
 	 * This is useful because if a column currently has a non-null value and if one wants to remove it he should be
 	 * able
@@ -311,6 +282,8 @@ public abstract class HecubaClientManager<K> {
 	 *
 	 * @param key - key of the column to be updated.
 	 * @param row - a map of columnNames and their respected values to be updated.
+	 * 
+	 * @throws Exception Error occurred during read
 	 */
 	public void updateRow(K key, Map<String, Object> row) throws Exception {
 		updateRow(key, row, null, null);
@@ -318,7 +291,7 @@ public abstract class HecubaClientManager<K> {
 
 	/**
 	 * Updates a complete row and uses the given timestamps and ttl values for each column.
-	 * <p/>
+	 * 
 	 * If you want to use the default values for any of the columns, either do not add that column name mapping to
 	 * timetamps or ttls maps or set the value to a negative value. Setting any of these columns to null will make the
 	 * defaults to be applied for all the columns.
@@ -328,6 +301,8 @@ public abstract class HecubaClientManager<K> {
 	 * @param timestamps - a map of column names to their timestamps. Defaults to the underlying clients timestamp
 	 *                   implementation.
 	 * @param ttls       - a map of column names to their ttls. Defaults to not expire.
+	 * 
+	 * @throws Exception Error occurred during update
 	 */
 	public abstract void updateRow(K key, Map<String, Object> row, Map<String, Long> timestamps,
 			Map<String, Integer> ttls) throws Exception;
@@ -338,29 +313,29 @@ public abstract class HecubaClientManager<K> {
 	 * @param key        - key of the column to be read.
 	 * @param columnName - name of the column to be read.
 	 *
-	 * @return
+	 * @return the value for the given key and column
 	 */
 	public abstract String readString(K key, String columnName);
 
 	/**
 	 * Retrieves a column together with its name, value, timestamp and ttl.
 	 *
-	 * @param key
-	 * @param columnName
+	 * @param key        - key of the column to be read.
+	 * @param columnName - name of the column to be read.
 	 *
-	 * @return
+	 * @return CassandraColumn containing the name, value, timestamp and ttl for the given key and column
 	 */
 	public abstract CassandraColumn readColumnInfo(K key, String columnName);
 
 	/**
 	 * Reads the value of a column related to a given key and returns it as a boolean.
-	 * <p/>
+	 * 
 	 * Note: since all the values are stored as Strings this method will explicitly convert the string to a boolean.
 	 *
 	 * @param key        - key of the column to be read.
 	 * @param columnName - name of the column to be read.
 	 *
-	 * @return
+	 * @return the value for the given key and column
 	 */
 	public Boolean readBoolean(K key, String columnName) {
 		return readBoolean(key, columnName, false);
@@ -368,13 +343,14 @@ public abstract class HecubaClientManager<K> {
 
 	/**
 	 * Reads the value of a column related to a given key and returns it as a boolean.
-	 * <p/>
+	 * 
 	 * Note: since all the values are stored as Strings this method will explicitly convert the string to a boolean.
 	 *
 	 * @param key        - key of the column to be read.
 	 * @param columnName - name of the column to be read.
+	 * @param defaultValue - default value if value is not found in cassandra
 	 *
-	 * @return
+	 * @return the value for the given key and column
 	 */
 	public Boolean readBoolean(K key, String columnName, boolean defaultValue) {
 		final String value = readString(key, columnName);
@@ -422,7 +398,7 @@ public abstract class HecubaClientManager<K> {
 	/**
 	 * Retrieves all the columns related to a given key.
 	 * Analogous to "Select * from TABLE" in SQL world.
-	 * <p/>
+	 * 
 	 * If column family can contain more than 100 columns, set the maxColumnCount
 	 * to the max no of columns possible in the column family row.
 	 * Otherwise only 100 columns would be fetched.
@@ -430,6 +406,7 @@ public abstract class HecubaClientManager<K> {
 	 * @param key - key of the column to be read.
 	 *
 	 * @return CassandraResultSet (interface to get column values)
+	 * @throws Exception Error occurred during read
 	 */
 	public abstract CassandraResultSet<K, String> readAllColumns(K key) throws Exception;
 
@@ -444,10 +421,10 @@ public abstract class HecubaClientManager<K> {
 	 *                 SQL).
 	 *                 When reversed is true, start will determine the right end of the range while finish will
 	 *                 determine the left,
-	 *                 meaning start must be >= finish.
+	 *                 meaning start must be &gt;= finish.
 	 * @param count    - number of columns to return (Analogous to "limit X" in SQL world).
 	 *
-	 * @return CassandraResultSet (interface to get column values) </br>
+	 * @return CassandraResultSet (interface to get column values)
 	 *         If key doesn't exist in Cassandra, returned ResultSet is empty (i.e. no columns present in the result
 	 *         set)
 	 */
@@ -455,13 +432,14 @@ public abstract class HecubaClientManager<K> {
 			int count);
 
 	/**
-	 * Retrieves all columns (upto a limit of 10000 columns) for the key. </br>
+	 * Retrieves all columns (upto a limit of 10000 columns) for the key.
+	 * 
 	 * If number of columns is very large (say 1M), fetching all of them can cause memory issues
 	 * and for that pagination should be used.
 	 *
 	 * @param key - key of the column family row
 	 *
-	 * @return CassandraResultSet (interface to iterate the columns to get column values) </br>
+	 * @return CassandraResultSet (interface to iterate the columns to get column values)
 	 *         If key doesn't exist in Cassandra, returned ResultSet is empty (i.e. no columns present in the result
 	 *         set)
 	 */
@@ -472,10 +450,10 @@ public abstract class HecubaClientManager<K> {
 	/**
 	 * Get the value of a counter and returns 0 if the counter is not available.
 	 *
-	 * @param key
-	 * @param counterColumnName
+	 * @param key        - key of the column to be read.
+	 * @param counterColumnName - name of the column to be read.
 	 *
-	 * @return
+	 * @return the value for the given key and column
 	 */
 	public abstract Long getCounterValue(K key, String counterColumnName);
 
@@ -483,9 +461,10 @@ public abstract class HecubaClientManager<K> {
 	 * Update the counter with the given value (which can be either negative or positive).
 	 * If the counter does not exist, a new counter will be created with the given value.
 	 *
-	 * @param key
-	 * @param counterColumnName
-	 * @param value
+	 * @param key        - key of the column to be read.
+	 * @param counterColumnName - name of the column to be read.
+	 * @param value - amount to increment counter by
+	 *
 	 */
 	public abstract void updateCounter(K key, String counterColumnName, long value);
 
@@ -493,8 +472,8 @@ public abstract class HecubaClientManager<K> {
 	 * Increase the counter by 1.
 	 * If the counter does not exist, a counter with the default value 0 will be created and then incremented.
 	 *
-	 * @param key
-	 * @param counterColumnName
+	 * @param key        - key of the column to be read.
+	 * @param counterColumnName - name of the column to be read.
 	 */
 	public abstract void incrementCounter(K key, String counterColumnName);
 
@@ -502,8 +481,8 @@ public abstract class HecubaClientManager<K> {
 	 * Decrease the counter by 1.
 	 * If the counter does not exist, a counter with the default value 0 will be created and then decremented.
 	 *
-	 * @param key
-	 * @param counterColumnName
+	 * @param key        - key of the column to be read.
+	 * @param counterColumnName - name of the column to be read.
 	 */
 	public abstract void decrementCounter(K key, String counterColumnName);
 
@@ -516,9 +495,9 @@ public abstract class HecubaClientManager<K> {
 	 *
 	 * @param keys - Set of keys to retrieve
 	 *
-	 * @return -- CassandraResultSet<K, String>. CassandraResultSet wraps the object returned by Hector/Astyanax API.
+	 * @return CassandraResultSet&lt;K, String&gt;. CassandraResultSet wraps the object returned by Hector/Astyanax API.
 	 *
-	 * @throws Exception
+	 * @throws Exception Error occurred during read
 	 */
 	public abstract CassandraResultSet<K, String> readAllColumns(Set<K> keys) throws Exception;
 
@@ -533,27 +512,25 @@ public abstract class HecubaClientManager<K> {
 	 *                 SQL).
 	 *                 When reversed is true, start will determine the right end of the range while finish will
 	 *                 determine the left,
-	 *                 meaning start must be >= finish.
-	 * @param count    - number of columns to return (Analogous to "limit X" in SQL world).
+	 *                 meaning start must be &gt;= finish.
 	 *
-	 * @return CassandraResultSet (interface to get column values) </br>
+	 * @return CassandraResultSet (interface to get column values)
 	 *         If any key(s) doesn't exist in Cassandra, returned ResultSet will contain no column for those key(s).
 	 */
-	public abstract CassandraResultSet<K, String> readColumnSlice(Set<K> keys, String start, String end,
-			boolean reversed, int count);
+	public abstract CassandraResultSet<K, String> readColumnSlice(Set<K> keys, String start, String end, boolean reversed);
 
 	/**
-	 * Retrieves all columns (upto a limit of 10000 columns) for set of keys. </br>
+	 * Retrieves all columns (upto a limit of 10000 columns) for set of keys. 
 	 * If number of columns is very large (say 1M), fetching all of them can cause memory issues
 	 * and for that pagination should be used.
 	 *
 	 * @param keys - set of keys for which all the columns need to be retrieved
 	 *
-	 * @return CassandraResultSet (interface to iterate the columns to get column values) </br>
+	 * @return CassandraResultSet (interface to iterate the columns to get column values) 
 	 *         If any key(s) doesn't exist in Cassandra, returned ResultSet will contain no column for those key(s).
 	 */
 	public CassandraResultSet<K, String> readColumnSliceAllColumns(Set<K> keys) {
-		return readColumnSlice(keys, null, null, false, 10000);
+		return readColumnSlice(keys, null, null, false);
 	}
 
 
@@ -563,10 +540,12 @@ public abstract class HecubaClientManager<K> {
 	 * row
 	 *
 	 * @param key - key of the column family row
+	 * @param columnNames - List of column names
 	 *
-	 * @return
+	 * @return CassandraResultSet (interface to iterate the columns to get column values) 
+	 *         If any key(s) doesn't exist in Cassandra, returned ResultSet will contain no column for those key(s).
 	 *
-	 * @throws Exception
+	 * @throws Exception Error occurred during read
 	 */
 	public abstract CassandraResultSet<K, String> readColumns(K key, List<String> columnNames) throws Exception;
 
@@ -578,9 +557,10 @@ public abstract class HecubaClientManager<K> {
 	 * @param keys        - Set of keys for which specified columns need to be retrieved
 	 * @param columnNames - List of column names
 	 *
-	 * @return
+	 * @return CassandraResultSet (interface to iterate the columns to get column values) 
+	 *         If any key(s) doesn't exist in Cassandra, returned ResultSet will contain no column for those key(s).
 	 *
-	 * @throws Exception
+	 * @throws Exception Error occurred during read
 	 */
 	public abstract CassandraResultSet<K, String> readColumns(Set<K> keys, List<String> columnNames) throws Exception;
 
@@ -605,7 +585,9 @@ public abstract class HecubaClientManager<K> {
 	 *
 	 * @param key - the key of the row to be deleted.
 	 */
-	public abstract void deleteRow(K key);
+	public void deleteRow(K key) {
+		deleteRow(key, -1);
+	}
 
 	public abstract void deleteRow(K key, long timestamp);
 
@@ -613,6 +595,20 @@ public abstract class HecubaClientManager<K> {
 	// Secondary Index Related Methods
 	// ====================================================
 
+	/**
+	 * We are indexing based on the name of the column AND the value stored under that column. For example,
+	 * if we have a person column family, keyed by person id/name, we might also want to retrieve the people by the
+	 * department they belong to. In that case, we should be creating a secondary index on the name and the value of
+	 * department column.
+	 * 
+	 * The row must match all parameters passed in.  For example if parameters = {a: x, b: y} then the row must have column a set to x AND column b set to y to be returned.
+	 *
+	 * @param parameters a map of all values the row must match.
+	 * @param limit the maximum number of columns to retrieve from matching rows 
+	 *
+	 * @return CassandraResultSet (interface to iterate the columns to get column values) 
+	 *         If any key(s) doesn't exist in Cassandra, returned ResultSet will contain no column for those key(s).
+	 */
 	public abstract CassandraResultSet readAllColumnsBySecondaryIndex(Map<String, String> parameters, int limit);
 
 	/**
@@ -621,10 +617,11 @@ public abstract class HecubaClientManager<K> {
 	 * department they belong to. In that case, we should be creating a secondary index on the name and the value of
 	 * department column.
 	 *
-	 * @param columnName  : name of the column to
+	 * @param columnName  : name of the column to retrieve
 	 * @param columnValue : value of the column
 	 *
-	 * @return
+	 * @return CassandraResultSet (interface to iterate the columns to get column values) 
+	 *         If any key(s) doesn't exist in Cassandra, returned ResultSet will contain no column for those key(s).
 	 */
 	public abstract CassandraResultSet<K, String> retrieveBySecondaryIndex(String columnName, String columnValue);
 
@@ -636,10 +633,11 @@ public abstract class HecubaClientManager<K> {
 	 *
 	 * This method will allow to do a multi get based on the secondary index.
 	 *
-	 * @param columnName
-	 * @param columnValue
+	 * @param columnName  : name of the column to retrieve
+	 * @param columnValue : value of the column
 	 *
-	 * @return
+	 * @return CassandraResultSet (interface to iterate the columns to get column values) 
+	 *         If any key(s) doesn't exist in Cassandra, returned ResultSet will contain no column for those key(s).
 	 */
 	public abstract CassandraResultSet<K, String> retrieveBySecondaryIndex(String columnName, List<String> columnValue);
 
@@ -652,7 +650,8 @@ public abstract class HecubaClientManager<K> {
 	 *
 	 * @param columnName : name of the column to be retrieved
 	 *
-	 * @return
+	 * @return CassandraResultSet (interface to iterate the columns to get column values) 
+	 *         If any key(s) doesn't exist in Cassandra, returned ResultSet will contain no column for those key(s).
 	 */
 	public abstract CassandraResultSet<K, String> retrieveByColumnNameBasedSecondaryIndex(String columnName);
 
@@ -660,7 +659,7 @@ public abstract class HecubaClientManager<K> {
 	 * We are indexing based on the name of the column AND the value stored under that column.
 	 * Sometimes there are use cases to only retrieve keys (and not all columns) using secondary index.
 	 * Furthermore, after retrieving keys, client can retrieve only specific columns using {@link HecubaClientManager#readColumns(Object, List)}
-	 * <p/>
+	 * 
 	 * {@link HecubaClientManager#retrieveBySecondaryIndex(String, String)} returns {@link CassandraResultSet} by reading allColumns
 	 *
 	 * @param columnName - Cassandra column name which is secondary indexed
@@ -673,7 +672,7 @@ public abstract class HecubaClientManager<K> {
 	 * We are indexing based on the name of the column AND the value stored under that column.
 	 * Retrieve keys using secondary index for multiple column values.
 	 * This is a multi-get for {@link HecubaClientManager#retrieveKeysBySecondaryIndex(String, String)}
-	 * <p/>
+	 * 
 	 * {@link HecubaClientManager#retrieveBySecondaryIndex(String, List)} returns result by reading allColumns
 
 	 * @param columnName - Cassandra column name which is secondary indexed
@@ -686,10 +685,10 @@ public abstract class HecubaClientManager<K> {
 	 * There are scenarios where we need to create secondary indexes only on the name of the column name.
 	 * Sometimes there are use cases to only retrieve keys (and not all columns) using secondary index.
 	 * Furthermore, after retrieving keys, client can retrieve only specific columns using {@link HecubaClientManager#readColumns(Object, List)}
-	 * <p/>
+	 * 
 	 * {@link HecubaClientManager#retrieveByColumnNameBasedSecondaryIndex(String)} returns result by reading allColumns
-	 * @param columnName
-	 * @return
+	 * @param columnName - Cassandra column name which is secondary indexed
+	 * @return list of keys that have the supplied column in their row
 	 */
 	public abstract List<K> retrieveKeysByColumnNameBasedSecondaryIndex(String columnName);
 
@@ -701,9 +700,9 @@ public abstract class HecubaClientManager<K> {
 	 * Takes a list of comma delimited urls, and a list of comma delimited port numbers.
 	 * It will match the pairs of port to hostnames.  If the counts don't match, then it will
 	 * backfill with the last valid port number.
-	 * @param locationURLs
-	 * @param ports
-	 * @return
+	 * @param locationURLs address of cassandra nodes
+	 * @param ports ports that cassandra nodes are listening on
+	 * @return locationURLs combined with ports (location1:port1,location2:port2,...)
 	 */
 	protected String getListOfNodesAndPorts(String locationURLs, String ports) {
 		final String paramSeparator = ConfigUtils.getInstance().getConfiguration().getString(
@@ -791,6 +790,9 @@ public abstract class HecubaClientManager<K> {
 	}
 
 	public String getSecondaryIndexKey(String columnName, String columnValue) {
+		if (columnValue == null || "null".equals(columnValue)) {
+			columnValue = "";
+		}
 		return columnName + ":" + columnValue;
 	}
 
