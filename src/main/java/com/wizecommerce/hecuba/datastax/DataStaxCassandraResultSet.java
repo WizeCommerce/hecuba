@@ -7,12 +7,9 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 
 import com.datastax.driver.core.*;
 import com.google.common.base.Objects;
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
 import com.wizecommerce.hecuba.AbstractCassandraResultSet;
 
 public class DataStaxCassandraResultSet<K> extends AbstractCassandraResultSet<K, String> {
-	private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
 	private ResultSet rs;
 	private Iterator<Row> rowIterator;
 	private DataType keyType;
@@ -156,10 +153,18 @@ public class DataStaxCassandraResultSet<K> extends AbstractCassandraResultSet<K,
 	@Override
 	public String getString(String columnName) {
 		Object value = currentRow.get(columnName);
-		if (value != null) {
-			return value.toString();
+
+		if (value == null) {
+			return null;
 		}
-		return null;
+
+		String result = value.toString();
+
+		if ("null".equalsIgnoreCase(result)) {
+			result = null;
+		}
+
+		return result;
 	}
 
 	@Override
@@ -183,10 +188,6 @@ public class DataStaxCassandraResultSet<K> extends AbstractCassandraResultSet<K,
 
 	@Override
 	public String toString() {
-		return new ToStringBuilder(this)
-		.append("key", currentKey)
-		.append("currentRow", currentRow)
-		.append("hasNextResult", hasNextResult())
-		.toString();
+		return new ToStringBuilder(this).append("key", currentKey).append("currentRow", currentRow).append("hasNextResult", hasNextResult()).toString();
 	}
 }

@@ -1523,6 +1523,33 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		}
 	}
 
+	/**
+	 * Ensure "null" is handled correctly
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void testUpdateRowScenario18() throws Exception {
+		HecubaClientManager<Long> cassandraManager = getHecubaClientManager();
+
+		Map<String, Object> row = new HashMap<>();
+		row.put("null_column", "null");
+		row.put("another_null_column", null);
+		row.put("non_null_column", "some value");
+
+		cassandraManager.updateRow(1234L, row);
+
+		CassandraResultSet<Long, String> resultSet = cassandraManager.readAllColumns(1234L);
+
+		assertTrue(resultSet.hasResults());
+
+		assertEquals(resultSet.getColumnNames().size(), 3);
+
+		assertNull(resultSet.getString("null_column"));
+		assertNull(resultSet.getString("another_null_column"));
+		assertEquals(resultSet.getString("non_null_column"), "some value");
+	}
+
 	@Test
 	public void outOfOrderDeleteTest() throws Exception {
 		final long SECOND_KEY = 112233L;
