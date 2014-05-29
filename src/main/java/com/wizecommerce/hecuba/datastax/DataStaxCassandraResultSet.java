@@ -5,6 +5,7 @@ import java.util.*;
 
 import org.apache.commons.lang3.builder.ToStringBuilder;
 
+import com.datastax.driver.core.ColumnDefinitions.Definition;
 import com.datastax.driver.core.*;
 import com.google.common.base.Objects;
 import com.wizecommerce.hecuba.AbstractCassandraResultSet;
@@ -13,6 +14,7 @@ public class DataStaxCassandraResultSet<K> extends AbstractCassandraResultSet<K,
 	private ResultSet rs;
 	private Iterator<Row> rowIterator;
 	private DataType keyType;
+	private String keyColumn;
 	private DataType columnType;
 	private Map<String, DataType> valueTypes = new HashMap<>();
 	private Map<String, Object> currentRow = new LinkedHashMap<>();
@@ -28,8 +30,22 @@ public class DataStaxCassandraResultSet<K> extends AbstractCassandraResultSet<K,
 		this.keyType = keyType;
 		this.columnType = columnType;
 		this.valueTypes = valueTypes;
+		this.keyColumn = getKeyColumn();
 
 		extractRow();
+	}
+
+	private String getKeyColumn() {
+		// TODO: Ideally we'd use ColumnDefinitions.contains...but it's throwing out of bounds exception
+		for (Definition definition : rs.getColumnDefinitions()) {
+			for (String keyColumn : new String[] { "KEY", "key" }) {
+				if (keyColumn.equals(definition.getName())) {
+					return keyColumn;
+				}
+			}
+		}
+
+		throw new RuntimeException("Can't determine key column from metadata");
 	}
 
 	@SuppressWarnings("unchecked")
@@ -37,7 +53,7 @@ public class DataStaxCassandraResultSet<K> extends AbstractCassandraResultSet<K,
 		while (rowIterator.hasNext()) {
 			Row row = rowIterator.next();
 
-			K key = (K) getValue(row, "key", keyType);
+			K key = (K) getValue(row, keyColumn, keyType);
 
 			if (currentKey == null) {
 				currentKey = key;

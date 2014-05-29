@@ -79,6 +79,7 @@ public abstract class HecubaConstants {
 	public static final String DATASTAX_READ_TIMEOUT = getPropertyName("datastax.socket.ReadTimeout");
 	public static final String DATASTAX_MAX_CONNECTIONS_PER_HOST = getPropertyName("datastax.pool.MaxConnectionsPerHost");
 	public static final String DATASTAX_COMPRESSION_ENABLED = getPropertyName("datastax.CompressionEnabled");
+	public static final String DATASTAX_TRACING_ENABLED = getPropertyName("datastax.TracingEnabled");
 	public static final String DATASTAX_DATACENTER = getPropertyName("datastax.Datacenter");
 	public static final String DATASTAX_STATEMENT_CACHE_MAX_SIZE = getPropertyName("datastax.statement.CacheMaxSize");
 	
