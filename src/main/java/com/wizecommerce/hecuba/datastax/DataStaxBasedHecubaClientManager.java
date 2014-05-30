@@ -7,8 +7,11 @@ import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.collections.MapUtils;
 import org.apache.commons.configuration.Configuration;
 import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang.builder.ToStringBuilder;
 import org.apache.commons.lang.math.NumberUtils;
 import org.apache.commons.lang3.ObjectUtils;
+import org.joda.time.format.DateTimeFormatter;
+import org.joda.time.format.ISODateTimeFormat;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -29,6 +32,9 @@ import com.wizecommerce.hecuba.util.ConfigUtils;
 
 public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 	private static final Logger logger = LoggerFactory.getLogger(DataStaxBasedHecubaClientManager.class);
+	private static final Configuration configuration = ConfigUtils.getInstance().getConfiguration();
+	private static final int statementCacheMaxSize = configuration.getInt(HecubaConstants.DATASTAX_STATEMENT_CACHE_MAX_SIZE, 1000);
+	private static final DateTimeFormatter DATE_FORMATTER = ISODateTimeFormat.hourMinuteSecondMillis();
 
 	private DataType keyType;
 
@@ -51,10 +57,12 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 	private int maxConnectionsPerHost;
 
 	private boolean compressionEnabled;
+	private boolean tracingEnabled;
 
 	private Session session;
-	private Configuration configuration = ConfigUtils.getInstance().getConfiguration();
-	private int statementCacheMaxSize = configuration.getInt(HecubaConstants.DATASTAX_STATEMENT_CACHE_MAX_SIZE, 1000);
+
+	private String keyColumn;
+	private String secondaryIndexKeyColumn;
 
 	private LoadingCache<String, PreparedStatement> readStatementCache = CacheBuilder.newBuilder().maximumSize(statementCacheMaxSize)
 			.build(new CacheLoader<String, PreparedStatement>() {
@@ -62,6 +70,9 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 				public PreparedStatement load(String query) throws Exception {
 					PreparedStatement stmt = session.prepare(query);
 					stmt.setConsistencyLevel(readConsistencyLevel);
+					if (tracingEnabled) {
+						stmt.enableTracing();
+					}
 					return stmt;
 				}
 			});
@@ -71,9 +82,13 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 				public PreparedStatement load(String query) throws Exception {
 					PreparedStatement stmt = session.prepare(query);
 					stmt.setConsistencyLevel(writeConsistencyLevel);
+					if (tracingEnabled) {
+						stmt.enableTracing();
+					}
 					return stmt;
 				}
 			});
+	private Cluster cluster;
 
 	public DataStaxBasedHecubaClientManager(CassandraParamsBean parameters, DataType keyType) {
 		super(parameters);
@@ -90,30 +105,55 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 				logger.warn("Datacenter is unset.  It is recommended to be set or performance may degrade unexpectedly.");
 			}
 		}
+
 		endpoints = Iterables.toArray(Splitter.on(":").split(parameters.getLocationURLs()), String.class);
-		keyspace = parameters.getKeyspace();
+		keyspace = '"' + parameters.getKeyspace() + '"';
 		columnFamily = '"' + parameters.getColumnFamily() + '"';
 		secondaryIndexColumnFamily = '"' + getSecondaryIndexColumnFamily(parameters) + '"';
 		port = NumberUtils.toInt(parameters.getCqlPort());
 		username = parameters.getUsername();
 		password = parameters.getPassword();
 
-		readConsistencyLevel = getConsistencyLevel("read");
-		writeConsistencyLevel = getConsistencyLevel("write");
+		readConsistencyLevel = getConsistencyLevel(parameters, "read");
+		writeConsistencyLevel = getConsistencyLevel(parameters, "write");
 
 		connectTimeout = configuration.getInt(HecubaConstants.DATASTAX_CONNECT_TIMEOUT, connectTimeout);
 		readTimeout = configuration.getInt(HecubaConstants.DATASTAX_READ_TIMEOUT, readTimeout);
 		maxConnectionsPerHost = configuration.getInt(HecubaConstants.DATASTAX_MAX_CONNECTIONS_PER_HOST, maxConnectionsPerHost);
 		compressionEnabled = configuration.getBoolean(HecubaConstants.DATASTAX_COMPRESSION_ENABLED, compressionEnabled);
+		tracingEnabled = configuration.getBoolean(HecubaConstants.DATASTAX_TRACING_ENABLED, tracingEnabled);
 
 		init();
+
+		keyColumn = getKeyColumn(columnFamily);
+
+		secondaryIndexKeyColumn = getKeyColumn(secondaryIndexColumnFamily);
+
+		logger.info("{}", ToStringBuilder.reflectionToString(this));
 	}
 
-	private ConsistencyLevel getConsistencyLevel(String operation) {
+	private String getKeyColumn(String columnFamily) {
+		KeyspaceMetadata keyspaceMetadata = cluster.getMetadata().getKeyspace(keyspace);
+		TableMetadata tableMetadata = keyspaceMetadata.getTable(columnFamily);
+
+		if (tableMetadata == null) {
+			return null;
+		}
+
+		for (String key : new String[] { "\"KEY\"", "key" }) {
+			if (tableMetadata.getColumn(key) != null) {
+				return key;
+			}
+		}
+
+		return null;
+	}
+
+	private ConsistencyLevel getConsistencyLevel(CassandraParamsBean parameters, String operation) {
 		Configuration configuration = ConfigUtils.getInstance().getConfiguration();
 
 		String consistencyLevel = "ONE";
-		String[] consistencyPolicyProperties = HecubaConstants.getConsistencyPolicyProperties(this.columnFamily, operation);
+		String[] consistencyPolicyProperties = HecubaConstants.getConsistencyPolicyProperties(parameters.getColumnFamily(), operation);
 
 		for (String property : consistencyPolicyProperties) {
 			consistencyLevel = configuration.getString(property, consistencyLevel);
@@ -137,19 +177,19 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		builder.append("BEGIN UNLOGGED BATCH\n");
 
 		if (isSecondaryIndexByColumnNameEnabledForColumn(columnName)) {
-			builder.append("\tDELETE FROM " + secondaryIndexColumnFamily + " where key = ? and column1 = ?;\n");
+			builder.append("\tDELETE FROM " + secondaryIndexColumnFamily + " where " + secondaryIndexKeyColumn + " = ? and column1 = ?;\n");
 			values.add(getSecondaryIndexKey(columnName, ""));
 			values.add(convertKey(key));
 		}
 
 		if (isSecondaryIndexByColumnNameAndValueEnabledForColumn(columnName)) {
 			String oldValue = readString(key, columnName);
-			builder.append("\tDELETE FROM " + secondaryIndexColumnFamily + " where key = ? and column1 = ?;\n");
+			builder.append("\tDELETE FROM " + secondaryIndexColumnFamily + " where " + secondaryIndexKeyColumn + " = ? and column1 = ?;\n");
 			values.add(getSecondaryIndexKey(columnName, oldValue));
 			values.add(convertKey(key));
 		}
 
-		builder.append("\tDELETE FROM " + columnFamily + " WHERE key = ? and column1 = ?;\n");
+		builder.append("\tDELETE FROM " + columnFamily + " WHERE " + keyColumn + " = ? and column1 = ?;\n");
 		values.add(convertKey(key));
 		values.add(columnName);
 
@@ -182,7 +222,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 				// Delete obsolete secondary indexes
 				if (secondaryIndexesToDelete.size() > 0) {
 					for (String secondaryIndexKey : secondaryIndexesToDelete) {
-						builder.append("\tDELETE FROM " + secondaryIndexColumnFamily + " WHERE key = ? and column1 = ?;\n");
+						builder.append("\tDELETE FROM " + secondaryIndexColumnFamily + " WHERE " + secondaryIndexKeyColumn + " = ? and column1 = ?;\n");
 						values.add(secondaryIndexKey);
 						values.add(convertKey(key));
 					}
@@ -194,7 +234,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		}
 
 		for (String columnName : columnNames) {
-			builder.append("\tDELETE FROM " + columnFamily + " where key = ? and column1 = ?;\n");
+			builder.append("\tDELETE FROM " + columnFamily + " where " + keyColumn + " = ? and column1 = ?;\n");
 			values.add(convertKey(key));
 			values.add(columnName);
 		}
@@ -237,7 +277,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 							values.add(timestamp);
 						}
 
-						builder.append(" WHERE key = ? and column1 = ?;\n");
+						builder.append(" WHERE " + secondaryIndexKeyColumn + " = ? and column1 = ?;\n");
 						values.add(secondaryIndexKey);
 						values.add(convertKey(key));
 					}
@@ -254,7 +294,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 			values.add(timestamp);
 		}
 
-		builder.append(" WHERE key = ?;\n");
+		builder.append(" WHERE " + keyColumn + " = ?;\n");
 		values.add(convertKey(key));
 
 		builder.append("APPLY BATCH;");
@@ -264,7 +304,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 
 	@Override
 	public Long getCounterValue(K key, String counterColumnName) {
-		String query = "select * from " + columnFamily + " where key=? and column1=?";
+		final String query = "select * from " + columnFamily + " where " + keyColumn + " = ? and column1 = ?";
 
 		CassandraResultSet<K, String> result = read(query, null, null, ImmutableMap.of(counterColumnName, DataType.counter()), convertKey(key), counterColumnName);
 
@@ -280,7 +320,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		StringBuilder builder = new StringBuilder();
 		List<Object> values = new ArrayList<>();
 
-		builder.append("UPDATE " + columnFamily + "set value = value + ? where key = ? and column1 = ?");
+		builder.append("UPDATE " + columnFamily + " set value = value + ? where " + keyColumn + " = ? and column1 = ?");
 		values.add(value);
 		values.add(convertKey(key));
 		values.add(counterColumnName);
@@ -300,28 +340,31 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 
 	@Override
 	public CassandraResultSet<K, String> readAllColumns(K key) throws Exception {
-		String query = "select * from " + columnFamily + " where key=?";
+		final String query = "select * from " + columnFamily + " where " + keyColumn + " = ?";
 
 		return read(query, convertKey(key));
 	}
 
 	@Override
 	public CassandraResultSet<K, String> readAllColumns(Set<K> keys) throws Exception {
-		String query = "select * from " + columnFamily + " where key in ?";
+		final String query = "select * from " + columnFamily + " where " + keyColumn + " in ?";
 
 		return read(query, convertKeys(keys));
 
 	}
 
 	@Override
+	@SuppressWarnings("rawtypes")
 	public CassandraResultSet readAllColumnsBySecondaryIndex(Map<String, String> parameters, int limit) {
 		List<Object> values = new ArrayList<>();
 		StringBuilder builder = new StringBuilder();
 		builder.append("select * from " + columnFamily + " where " + StringUtils.repeat("?=?", " and ", parameters.size()));
+
 		if (limit > 0) {
 			builder.append(" limit ?");
 			values.add(limit);
 		}
+
 		for (Map.Entry<String, String> entry : parameters.entrySet()) {
 			String column = entry.getKey();
 			String value = entry.getValue();
@@ -334,7 +377,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 
 	@Override
 	public CassandraColumn readColumnInfo(K key, String columnName) {
-		String query = "select key, column1, value, writetime(value), ttl(value) from " + columnFamily + " where key=? and column1=?";
+		final String query = "select " + keyColumn + ", column1, value, writetime(value), ttl(value) from " + columnFamily + " where " + keyColumn + " = ? and column1 = ?";
 
 		PreparedStatement stmt = readStatementCache.getUnchecked(query);
 
@@ -359,7 +402,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 			return readAllColumns(key);
 		}
 
-		String query = "select * from " + columnFamily + " where key=? and column1 in ?";
+		final String query = "select * from " + columnFamily + " where " + keyColumn + " = ? and column1 in ?";
 
 		CassandraResultSet<K, String> result = read(query, convertKey(key), columnNames);
 
@@ -372,7 +415,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 			return readAllColumns(keys);
 		}
 
-		String query = "select * from " + columnFamily + " where key in ? and column1 in ?";
+		final String query = "select * from " + columnFamily + " where " + keyColumn + " in ? and column1 in ?";
 
 		CassandraResultSet<K, String> result = read(query, convertKeys(keys), columnNames);
 
@@ -383,7 +426,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 	public CassandraResultSet<K, String> readColumnSlice(K key, String start, String end, boolean reversed, int count) {
 		List<Object> values = new ArrayList<>();
 		StringBuilder builder = new StringBuilder();
-		builder.append("select * from " + columnFamily + " where key=?");
+		builder.append("select * from " + columnFamily + " where " + keyColumn + " = ?");
 		values.add(convertKey(key));
 
 		if (start != null) {
@@ -415,7 +458,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 
 		List<Object> values = new ArrayList<>();
 		StringBuilder builder = new StringBuilder();
-		builder.append("select * from " + columnFamily + " where key in ?");
+		builder.append("select * from " + columnFamily + " where " + keyColumn + " in ?");
 		values.add(convertKeys(keys));
 
 		if (start != null) {
@@ -437,7 +480,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 
 	@Override
 	public String readString(K key, String columnName) {
-		String query = "select * from " + columnFamily + " where key=? and column1=?";
+		final String query = "select * from " + columnFamily + " where " + keyColumn + " = ? and column1 = ?";
 
 		CassandraResultSet<K, String> result = read(query, convertKey(key), columnName);
 
@@ -508,9 +551,11 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		return retrieveKeysBySecondaryIndex(columnName, (String) null);
 	}
 
+	@SuppressWarnings("unchecked")
 	@Override
 	public Map<String, List<K>> retrieveKeysBySecondaryIndex(String columnName, List<String> columnValues) {
-		String query = "select * from " + secondaryIndexColumnFamily + " where key in ?";
+		final String query = "select * from " + secondaryIndexColumnFamily + " where " + secondaryIndexKeyColumn + " in ?";
+
 		Map<String, String> secondaryIndexKeys = new HashMap<>();
 		for (String columnValue : columnValues) {
 			secondaryIndexKeys.put(getSecondaryIndexKey(columnName, columnValue), columnValue);
@@ -547,7 +592,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 	@SuppressWarnings("unchecked")
 	@Override
 	public List<K> retrieveKeysBySecondaryIndex(String columnName, String columnValue) {
-		String query = "select * from " + secondaryIndexColumnFamily + " where key = ?";
+		final String query = "select * from " + secondaryIndexColumnFamily + " where " + secondaryIndexKeyColumn + " = ?";
 		CassandraResultSet<K, String> keysResultSet = read(query, DataType.ascii(), keyType, ImmutableMap.of("*", keyType), getSecondaryIndexKey(columnName, columnValue));
 		List<K> keys = new ArrayList<>();
 		if (keysResultSet.hasResults()) {
@@ -570,7 +615,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		StringBuilder builder = new StringBuilder();
 		List<Object> values = new ArrayList<>();
 
-		builder.append("INSERT INTO " + columnFamily + "(key, column1, value) values (?,?,?)");
+		builder.append("INSERT INTO " + columnFamily + " (" + keyColumn + ", column1, value) values (?,?,?)");
 		values.add(convertKey(key));
 		values.add(columnName);
 		values.add(value);
@@ -588,7 +633,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		builder.append("BEGIN UNLOGGED BATCH\n");
 
 		for (Map.Entry<String, Object> entry : row.entrySet()) {
-			builder.append("\tINSERT INTO " + columnFamily + " (key, column1, value) values (?,?,?)");
+			builder.append("\tINSERT INTO " + columnFamily + " (" + keyColumn + ", column1, value) values (?,?,?)");
 			values.add(convertKey(key));
 			values.add(entry.getKey());
 			String valueToInsert = ClientManagerUtils.getInstance().convertValueForStorage(entry.getValue());
@@ -624,7 +669,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 
 		updateSecondaryIndexes(key, columnName, value, timestamp, ttl);
 
-		builder.append("INSERT INTO " + columnFamily + "(key, column1, value) values (?,?,?)");
+		builder.append("INSERT INTO " + columnFamily + " (" + keyColumn + ", column1, value) values (?,?,?)");
 		values.add(convertKey(key));
 		values.add(columnName);
 		values.add(value);
@@ -715,7 +760,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 					values.add(timestamp);
 				}
 
-				builder.append(" where key = ? and column1 = ?;\n");
+				builder.append(" where " + secondaryIndexKeyColumn + " = ? and column1 = ?;\n");
 				values.add(getSecondaryIndexKey(columnName, oldValue));
 				values.add(convertKey(key));
 			}
@@ -724,7 +769,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 			String valueToInsert = ClientManagerUtils.getInstance().convertValueForStorage(value);
 
 			// Insert New Value
-			builder.append("\tINSERT INTO " + secondaryIndexColumnFamily + "(key, column1, value) values (?,?,?)");
+			builder.append("\tINSERT INTO " + secondaryIndexColumnFamily + " (" + secondaryIndexKeyColumn + ", column1, value) values (?,?,?)");
 			values.add(getSecondaryIndexKey(columnName, valueToInsert));
 			values.add(convertKey(key));
 			values.add(convertKey(key));
@@ -765,13 +810,13 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 				values.add(timestamp);
 			}
 
-			builder.append(" where key = ? and column1 = ?;\n");
+			builder.append(" where " + secondaryIndexKeyColumn + " = ? and column1 = ?;\n");
 			values.add(getSecondaryIndexKey(columnName, oldValue));
 			values.add(convertKey(key));
 		}
 
 		// Insert New Value
-		builder.append("\tINSERT INTO " + secondaryIndexColumnFamily + "(key, column1, value) values (?,?,?)");
+		builder.append("\tINSERT INTO " + secondaryIndexColumnFamily + " (" + secondaryIndexKeyColumn + ", column1, value) values (?,?,?)");
 		values.add(getSecondaryIndexKey(columnName, value));
 		values.add(convertKey(key));
 		values.add(convertKey(key));
@@ -833,6 +878,19 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		ResultSet rs = session.execute(bind);
 		long durationNanos = System.nanoTime() - startTimeNanos;
 
+		ExecutionInfo executionInfo = rs.getExecutionInfo();
+		Host queriedHost = executionInfo.getQueriedHost();
+		logger.debug("queried host = {}", queriedHost);
+
+		if (tracingEnabled) {
+			QueryTrace queryTrace = executionInfo.getQueryTrace();
+			if (queryTrace != null) {
+				if (logger.isDebugEnabled()) {
+					logger.debug("{}", toString(queryTrace));
+				}
+			}
+		}
+
 		return new DataStaxCassandraResultSet<K>(rs, ObjectUtils.defaultIfNull(keyType, this.keyType), columnType, valueTypes, durationNanos);
 	}
 
@@ -841,7 +899,35 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		PreparedStatement stmt = writeStatementCache.getUnchecked(query);
 
 		BoundStatement bind = stmt.bind(values);
-		session.execute(bind);
+		ResultSet rs = session.execute(bind);
+
+		ExecutionInfo executionInfo = rs.getExecutionInfo();
+		Host queriedHost = executionInfo.getQueriedHost();
+		logger.debug("queried host = {}", queriedHost);
+
+		if (tracingEnabled) {
+			QueryTrace queryTrace = executionInfo.getQueryTrace();
+			if (queryTrace != null) {
+				if (logger.isDebugEnabled()) {
+					logger.debug("{}", toString(queryTrace));
+				}
+			}
+		}
+	}
+
+	private String toString(QueryTrace queryTrace) {
+		StringBuilder builder = new StringBuilder();
+
+		builder.append("Trace id: ").append(queryTrace.getTraceId());
+		builder.append(String.format("%-38s | %-12s | %-10s | %-12s\n", "activity", "timestamp", "source", "source_elapsed"));
+		builder.append("---------------------------------------+--------------+------------+--------------");
+
+		for (QueryTrace.Event event : queryTrace.getEvents()) {
+			builder.append(String.format("%38s | %12s | %10s | %12s\n", event.getDescription(), DATE_FORMATTER.print(event.getTimestamp()), event.getSource(),
+					event.getSourceElapsedMicros()));
+		}
+
+		return builder.toString();
 	}
 
 	private void init() {
@@ -897,8 +983,8 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 			builder.withPoolingOptions(poolingOptions);
 		}
 
-		Cluster cluster = builder.build();
-		session = cluster.connect('"' + keyspace + '"');
+		cluster = builder.build();
+		session = cluster.connect(keyspace);
 	}
 
 	@Override

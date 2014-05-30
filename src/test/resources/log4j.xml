@@ -9,9 +9,12 @@
 		</layout>
 	</appender>
 
+	<logger name="com.wizecommerce.hecuba.datastax">
+		<level value="error" />
+	</logger>
+
 	<logger name="org.apache.cassandra.db.Memtable">
 		<level value="fatal" />
-		<appender-ref ref="console" />
 	</logger>
 
 	<root>
