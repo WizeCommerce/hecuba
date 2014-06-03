@@ -55,6 +55,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 	private int connectTimeout;
 	private int readTimeout;
 	private int maxConnectionsPerHost;
+	private int statementFetchSize;
 
 	private boolean compressionEnabled;
 	private boolean tracingEnabled;
@@ -122,6 +123,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		maxConnectionsPerHost = configuration.getInt(HecubaConstants.DATASTAX_MAX_CONNECTIONS_PER_HOST, maxConnectionsPerHost);
 		compressionEnabled = configuration.getBoolean(HecubaConstants.DATASTAX_COMPRESSION_ENABLED, compressionEnabled);
 		tracingEnabled = configuration.getBoolean(HecubaConstants.DATASTAX_TRACING_ENABLED, tracingEnabled);
+		statementFetchSize = configuration.getInteger(HecubaConstants.DATASTAX_STATEMENT_FETCH_SIZE, statementFetchSize);
 
 		init();
 
@@ -874,6 +876,13 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		PreparedStatement stmt = readStatementCache.getUnchecked(query);
 
 		BoundStatement bind = stmt.bind(values);
+
+		if (statementFetchSize > 0) {
+			bind.setFetchSize(statementFetchSize);
+		} else {
+			bind.setFetchSize(Integer.MAX_VALUE);
+		}
+
 		long startTimeNanos = System.nanoTime();
 		ResultSet rs = session.execute(bind);
 		long durationNanos = System.nanoTime() - startTimeNanos;

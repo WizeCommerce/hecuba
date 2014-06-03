@@ -71,7 +71,7 @@ public abstract class HecubaConstants {
 	public static final String HECTOR_RETRY_DOWN_HOST_DELAY = getPropertyName("hectorpools.retrydownedhostsinseconds");
 	public static final String HECTOR_THRIFT_SOCKET_TIMEOUT = getPropertyName("hectorpools.thriftsockettimeout");
 	public static final String HECTOR_USE_THRIFT_FRAME_TRANSPORT = getPropertyName("hectorpools.usethriftframedtransport");
-	
+
 	/***************************
 	 * DataStax Specific Options
 	 *****************************/
@@ -82,7 +82,7 @@ public abstract class HecubaConstants {
 	public static final String DATASTAX_TRACING_ENABLED = getPropertyName("datastax.TracingEnabled");
 	public static final String DATASTAX_DATACENTER = getPropertyName("datastax.Datacenter");
 	public static final String DATASTAX_STATEMENT_CACHE_MAX_SIZE = getPropertyName("datastax.statement.CacheMaxSize");
-	
+	public static final String DATASTAX_STATEMENT_FETCH_SIZE = getPropertyName("datastax.statement.FetchSize");
 
 	public static enum HECTOR_LOAD_BALANCY_POLICIES {
 		LeastActiveBalancingPolicy, DynamicLoadBalancingPolicy, RoundRobinBalancingPolicy,
@@ -95,7 +95,7 @@ public abstract class HecubaConstants {
 	public static String[] getConsistencyPolicyProperties(String columnFamily, String operation) {
 		return new String[] { getPropertyName(dotJoiner.join("consistencypolicy", operation)), getPropertyName(dotJoiner.join(columnFamily, "consistencypolicy", operation)) };
 	}
-	
+
 	public static String getSecondaryIndexColumnFamilyProperty(String columnFamily) {
 		return getPropertyName(dotJoiner.join(columnFamily, "secondaryIndexCF"));
 	}
