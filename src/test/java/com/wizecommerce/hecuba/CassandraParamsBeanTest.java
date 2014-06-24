@@ -64,7 +64,7 @@ public class CassandraParamsBeanTest {
     public void testDeepCopyWithDefaultValues() throws Exception {
         final   CassandraParamsBean initialBean = new CassandraParamsBean();
 
-        final CassandraParamsBean deepCopiedBean = initialBean.deepCopy();
+        final CassandraParamsBean deepCopiedBean = new CassandraParamsBean(initialBean);
         assertEquals(initialBean.getColumnFamily(), deepCopiedBean.getColumnFamily());
         assertEquals(initialBean.getClustername(), deepCopiedBean.getClustername());
         assertEquals(initialBean.getKeyspace(), deepCopiedBean.getKeyspace());

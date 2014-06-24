@@ -18,7 +18,7 @@ import com.google.common.base.Objects;
 
 /**
  * This is a bean to store cassandra connection parameters.
- * 
+ *
  * @author asinghal
  */
 public class CassandraParamsBean {
@@ -211,25 +211,5 @@ public class CassandraParamsBean {
 		setMaxSiColumnCount(initialBean.maxSiColumnCount);
 		setUsername(initialBean.username);
 		setPassword(initialBean.password);
-	}
-
-	@Deprecated
-	public CassandraParamsBean deepCopy() {
-		CassandraParamsBean cassandraParamsBean = new CassandraParamsBean();
-		cassandraParamsBean.setClustername(clustername);
-		cassandraParamsBean.setDataCenter(dataCenter);
-		cassandraParamsBean.setColumnFamily(columnFamily);
-		cassandraParamsBean.setKeyspace(keyspace);
-		cassandraParamsBean.setLocationURLs(locationURLs);
-		cassandraParamsBean.setThriftPorts(thriftPorts);
-		cassandraParamsBean.setCqlPort(cqlPort);
-		cassandraParamsBean.setKeyType(keyType);
-		cassandraParamsBean.setSiColumns(siColumns);
-		cassandraParamsBean.setMaxColumnCount(maxColumnCount);
-		cassandraParamsBean.setMaxSiColumnCount(maxSiColumnCount);
-		cassandraParamsBean.setSiByColumnsPattern(siByColumnsPattern);
-		cassandraParamsBean.setPassword(password);
-		cassandraParamsBean.setUsername(username);
-		return cassandraParamsBean;
 	}
 }
