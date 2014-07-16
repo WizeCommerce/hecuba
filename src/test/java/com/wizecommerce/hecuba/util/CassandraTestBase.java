@@ -27,11 +27,12 @@ import javax.xml.namespace.QName;
 import javax.xml.stream.XMLStreamException;
 
 import me.prettyprint.cassandra.serializers.LongSerializer;
+import me.prettyprint.hector.api.Cluster;
 import me.prettyprint.hector.api.Serializer;
+import me.prettyprint.hector.api.factory.HFactory;
 
 import org.apache.axiom.om.*;
 import org.apache.cassandra.exceptions.ConfigurationException;
-import org.apache.log4j.Logger;
 import org.apache.thrift.transport.TTransportException;
 import org.cassandraunit.DataLoader;
 import org.cassandraunit.utils.EmbeddedCassandraServerHelper;
@@ -39,6 +40,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.wizecommerce.hecuba.CassandraParamsBean;
 import com.wizecommerce.hecuba.HecubaClientManager;
@@ -59,7 +62,7 @@ public abstract class CassandraTestBase {
 	public static final String DATACENTER = "datacenter1";
 	public static final Serializer<Long> LONG_KEY_SERIALIZER = LongSerializer.get();
 
-	protected static Logger logger = Logger.getLogger(CassandraTestBase.class);
+	protected static Logger logger = LoggerFactory.getLogger(CassandraTestBase.class);
 
 	@Before
 	public void setup() {
@@ -72,8 +75,17 @@ public abstract class CassandraTestBase {
 
 			// now load this information into Cassandra cluster.
 			EmbeddedCassandraServerHelper.startEmbeddedCassandra();
-			if (cassandraServerWaitTime > 0L) {
-				Thread.sleep(cassandraServerWaitTime);
+
+			//wait until cluster is ready
+			while (true) {
+				Cluster cluster = HFactory.getOrCreateCluster(CLUSTER_NAME, LOCATION + ":" + PORT);
+				logger.info("Cluster: {}, name: {}", cluster, CLUSTER_NAME);
+				if (cluster != null && cluster.getConnectionManager().getActivePools().size() > 0) {
+					break;
+				} else {
+					logger.info("Sleep {}ms to check if server is ready", cassandraServerWaitTime);
+					Thread.sleep(cassandraServerWaitTime);
+				}
 			}
 
 			DataLoader loader = new DataLoader(CLUSTER_NAME, LOCATION + ":" + PORT);

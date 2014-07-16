@@ -432,12 +432,20 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		values.add(convertKey(key));
 
 		if (start != null) {
-			builder.append(" and column1 >= ?");
+			if (reversed) {
+				builder.append(" and column1 <= ?");
+			} else {
+				builder.append(" and column1 >= ?");
+			}
 			values.add(start);
 		}
 
 		if (end != null) {
-			builder.append(" and column1 <= ?");
+			if (reversed) {
+				builder.append(" and column1 >= ?");
+			} else {
+				builder.append(" and column1 <= ?");
+			}
 			values.add(end);
 		}
 
@@ -455,8 +463,7 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 
 	@Override
 	public CassandraResultSet<K, String> readColumnSlice(Set<K> keys, String start, String end, boolean reversed) {
-		// CQL3 does not support column slice count limit anymore (they used to have FIRST N)
-		// If count is passed in we'll issue multiple single gets, but return as a stream of streams
+		// CQL3 does not support column slice count limit anymore (they used to have FIRST N), so removing support for "count"
 
 		List<Object> values = new ArrayList<>();
 		StringBuilder builder = new StringBuilder();
@@ -464,20 +471,30 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		values.add(convertKeys(keys));
 
 		if (start != null) {
-			builder.append(" and column1 >= ?");
+			if (reversed) {
+				builder.append(" and column1 <= ?");
+			} else {
+				builder.append(" and column1 >= ?");
+			}
 			values.add(start);
 		}
 
 		if (end != null) {
-			builder.append(" and column1 <= ?");
+			if (reversed) {
+				builder.append(" and column1 >= ?");
+			} else {
+				builder.append(" and column1 <= ?");
+			}
 			values.add(end);
 		}
 
+		// If reversed we'll just reverse internally, since Cassandra doesn't preserve key order
+		CassandraResultSet<K, String> resultSet = read(builder.toString(), values.toArray());
 		if (reversed) {
-			builder.append(" order by column1 desc");
+			resultSet = new ReversedColumnsCassandraResultSet<>(resultSet);
 		}
 
-		return read(builder.toString(), values.toArray());
+		return resultSet;
 	}
 
 	@Override

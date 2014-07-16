@@ -504,8 +504,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		cassandraManager.updateRow(key, row);
 
 		/**
-		 * ____________________________________________________________ | Retrieve all columns for the key (no of columns < 10000)
-		 * ------------------------------------------------------------
+		 * ---------------| Retrieve all columns for the key (no of columns < 10000) |---------------
 		 */
 		// Retrieve all columns
 		CassandraResultSet<Long, String> result = cassandraManager.readColumnSliceAllColumns(key);
@@ -516,7 +515,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		}
 
 		/**
-		 * __________________________________ | Retrieve N columns for the key ----------------------------------
+		 * ---------------| Retrieve N columns for the key |---------------
 		 */
 		// Retrieve 120 columns
 		result = cassandraManager.readColumnSlice(key, null, null, false, 120);
@@ -524,10 +523,21 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		assertEquals(120, result.getColumnNames().size());
 
 		/**
-		 * _________________________________________________ | Retrieve N columns with column range specified -------------------------------------------------
+		 * ---------------| Retrieve N columns with column range specified |---------------
 		 */
 		// Columns in a range with limit as 10
 		result = cassandraManager.readColumnSlice(key, "column_111", "column_113", false, 10);
+		// This range contains 3 columns, so the column count should be 3
+		assertEquals(3, result.getColumnNames().size());
+		assertEquals("value_111", result.getString("column_111"));
+		assertEquals("value_112", result.getString("column_112"));
+		assertEquals("value_113", result.getString("column_113"));
+
+		/**
+		 * ---------------| Retrieve N columns with column range specified in reverse |---------------
+		 */
+		// Columns in a range with limit as 10
+		result = cassandraManager.readColumnSlice(key, "column_113", "column_111", true, 10);
 		// This range contains 3 columns, so the column count should be 3
 		assertEquals(3, result.getColumnNames().size());
 		assertEquals("value_111", result.getString("column_111"));
@@ -538,7 +548,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		/****** TEST CASSANDRA ROW CONTAINS < 100 COLUMNS ********/
 		/*********************************************************/
 		/**
-		 * __________________________________________________ | Retrieve all columns for row with < 100 columns --------------------------------------------------
+		 * ---------------| Retrieve all columns for row with < 100 columns |---------------
 		 */
 		row.clear();
 		key = 5678L;
@@ -554,7 +564,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		}
 
 		/**
-		 * __________________________________ | Retrieve N columns for the key ----------------------------------
+		 * ---------------| Retrieve N columns for the key |---------------
 		 */
 		// Retrieve 50 columns
 		result = cassandraManager.readColumnSlice(key, null, null, false, 50);
@@ -562,7 +572,7 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		assertEquals(50, result.getColumnNames().size());
 
 		/**
-		 * _________________________________________________ | Retrieve N columns with column range specified -------------------------------------------------
+		 * ---------------| Retrieve N columns with column range specified |---------------
 		 */
 		// Columns in a range with limit as 10
 		result = cassandraManager.readColumnSlice(key, "column_11", "column_13", false, 10);
@@ -571,6 +581,17 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 		assertEquals("value_11", result.getString("column_11"));
 		assertEquals("value_12", result.getString("column_12"));
 		assertEquals("value_13", result.getString("column_13"));
+
+		/**
+		 * ---------------| Retrieve N columns with column range specified in reverse |---------------
+		 */
+		result = cassandraManager.readColumnSlice(key, "column_13", "column_11", true, 10);
+		// This range contains 3 columns, so the column count should be 3
+		assertEquals(3, result.getColumnNames().size());
+		assertEquals("value_11", result.getString("column_11"));
+		assertEquals("value_12", result.getString("column_12"));
+		assertEquals("value_13", result.getString("column_13"));
+
 
 		/*************************************************************/
 		/****** TEST CASSANDRA ROW DOES NOT EXIST (CACHE MISS) *******/
@@ -585,7 +606,6 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 		result = cassandraManager.readColumnSlice(key, "column_11", "column_13", false, 10);
 		assertEquals(0, result.getColumnNames().size());
-
 	}
 
 	@Test
@@ -1040,6 +1060,10 @@ public abstract class HecubaCassandraManagerTestBase extends CassandraTestBase {
 
 		cassandraManager.updateString(1234L, "test_column", "test_value");
 		assertEquals("test_value", cassandraManager.readString(1234L, "test_column"));
+
+		// Test non-string column name
+		cassandraManager.updateString(1234L, "987654321", "test_value2");
+		assertEquals("test_value2", cassandraManager.readString(1234L, "987654321"));
 	}
 
 	@Test
