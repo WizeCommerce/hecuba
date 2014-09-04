@@ -796,6 +796,11 @@ public abstract class HecubaClientManager<K> {
 		return columnName + ":" + columnValue;
 	}
 
+	/**
+	 * Gracefully shuts down the cluster closing all cassandra connections.
+	 */
+	public abstract void shutDown();
+	
 	protected String getSecondaryIndexedColumnValue(String secondaryIndexKey) {
 		if (secondaryIndexKey.length() > secondaryIndexKey.indexOf(":") + 1) {
 			return secondaryIndexKey.substring(secondaryIndexKey.indexOf(":") + 1, secondaryIndexKey.length());

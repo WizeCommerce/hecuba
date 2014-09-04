@@ -740,4 +740,11 @@ public class AstyanaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 		log.debug(downedHostsSB.toString());
 	}
 
+	@Override
+	public void shutDown() {
+		clusterContext.shutdown();
+		context.shutdown();
+		connectionPoolConfigurationImpl.shutdown();
+	}
+
 }

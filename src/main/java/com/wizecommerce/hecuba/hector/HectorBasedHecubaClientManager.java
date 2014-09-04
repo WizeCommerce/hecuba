@@ -502,7 +502,7 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 	private CassandraResultSet<K, String> retrieveFromSecondaryIndex(String columnName, String columnValue) {
 		List<K> mappingObjectIds = retrieveKeysFromSecondaryIndex(columnName, columnValue);
 		if (CollectionUtils.isNotEmpty(mappingObjectIds)) {
-			return readAllColumns(new HashSet<K>(mappingObjectIds));
+			return readAllColumns(new LinkedHashSet<K>(mappingObjectIds));
 		}
 
 		return null;
@@ -1022,5 +1022,10 @@ public class HectorBasedHecubaClientManager<K> extends HecubaClientManager<K> {
 		}
 		downedHostsSB.append("}");
 		log.debug(downedHostsSB.toString());
+	}
+
+	@Override
+	public void shutDown() {
+		HFactory.shutdownCluster(cluster);
 	}
 }
