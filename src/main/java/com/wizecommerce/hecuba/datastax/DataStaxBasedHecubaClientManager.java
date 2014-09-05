@@ -1016,4 +1016,10 @@ public class DataStaxBasedHecubaClientManager<K> extends HecubaClientManager<K> 
 	@Override
 	protected void logDownedHosts() {
 	}
+	
+	@Override
+	public void shutDown() {
+		session.close();
+		cluster.close();
+	}
 }
