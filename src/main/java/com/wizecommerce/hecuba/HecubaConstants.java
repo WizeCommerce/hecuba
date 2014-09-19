@@ -35,7 +35,7 @@ public abstract class HecubaConstants {
 	public static final String HECUBA_CASSANDRA_CLIENT_IMPLEMENTATION_MANAGER = getPropertyName("cassandraclientmanager");
 
 	public static enum CassandraClientImplementation {
-		HECTOR, ASTYANAX, DATASTAX
+		HECTOR, ASTYANAX, DATASTAX, DATASTAX_SHARED
 	}
 
 	public static DateTimeFormatter DATE_FORMATTER = DateTimeFormat.forPattern("E, dd MMM yyyy HH:mm:ss Z");
