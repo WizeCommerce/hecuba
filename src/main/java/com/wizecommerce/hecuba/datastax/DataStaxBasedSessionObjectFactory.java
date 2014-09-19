@@ -37,7 +37,7 @@ public class DataStaxBasedSessionObjectFactory {
 
 	// Initializing egarly since its very light weight, until clusters and session are built. Guarantees
 	// thread safety.
-	
+
 	private static final DataStaxBasedSessionObjectFactory instance = new DataStaxBasedSessionObjectFactory();
 
 	private DataStaxBasedSessionObjectFactory() {
@@ -119,7 +119,7 @@ public class DataStaxBasedSessionObjectFactory {
 			}
 
 			property = properties.get("compressionEnabled");
-			if ((Boolean) property) {
+			if (property != null && (Boolean) property) {
 
 				builder.withCompression(Compression.LZ4);
 			}
