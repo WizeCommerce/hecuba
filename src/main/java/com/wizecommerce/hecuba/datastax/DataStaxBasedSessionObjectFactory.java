@@ -37,6 +37,7 @@ public class DataStaxBasedSessionObjectFactory {
 
 	// Initializing egarly since its very light weight, until clusters and session are built. Guarantees
 	// thread safety.
+	
 	private static final DataStaxBasedSessionObjectFactory instance = new DataStaxBasedSessionObjectFactory();
 
 	private DataStaxBasedSessionObjectFactory() {
@@ -94,6 +95,7 @@ public class DataStaxBasedSessionObjectFactory {
 			Object property = properties.get("dataCenter");
 			if (property != null) {
 				loadBalancingPolicy = new DCAwareRoundRobinPolicy((String) property);
+
 			} else {
 				loadBalancingPolicy = new RoundRobinPolicy();
 			}
@@ -103,6 +105,7 @@ public class DataStaxBasedSessionObjectFactory {
 			Builder builder = Cluster.builder().addContactPoints(key.getLocationUrls())
 					.withLoadBalancingPolicy(loadBalancingPolicy);
 
+<<<<<<< HEAD
 			property = properties.get("port");
 			if (property != null) {
 				builder.withPort((Integer) property);
@@ -118,6 +121,7 @@ public class DataStaxBasedSessionObjectFactory {
 
 			property = properties.get("compressionEnabled");
 			if ((Boolean) property) {
+
 				builder.withCompression(Compression.LZ4);
 			}
 
@@ -135,6 +139,7 @@ public class DataStaxBasedSessionObjectFactory {
 					socketOptions = new SocketOptions();
 				}
 				socketOptions.setConnectTimeoutMillis((Integer) property);
+
 			}
 
 			if (socketOptions != null) {
