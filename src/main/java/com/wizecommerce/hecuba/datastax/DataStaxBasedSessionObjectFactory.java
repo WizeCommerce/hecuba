@@ -6,6 +6,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Cluster.Builder;
 import com.datastax.driver.core.HostDistance;
@@ -30,6 +33,8 @@ import com.wizecommerce.hecuba.datastax.SessionCachingKey.ClusterCachingKey;
  */
 @ThreadSafe
 public class DataStaxBasedSessionObjectFactory {
+
+	private static final Logger logger = LoggerFactory.getLogger(DataStaxBasedSessionObjectFactory.class);
 	final private Map<ClusterCachingKey, Cluster> clusterCache = new HashMap<>();
 	final private Map<SessionCachingKey, Session> sessionCache = new HashMap<>();
 	final private Map<SessionCachingKey, AtomicInteger> usersPerSession = new HashMap<>();
@@ -62,6 +67,7 @@ public class DataStaxBasedSessionObjectFactory {
 					session = cluster.connect(key.getKeySpace());
 					sessionCache.put(key, session);
 					usersPerSession.put(key, new AtomicInteger());
+					logger.info("New session created with properties: "+key);
 				}
 			}
 		}
@@ -158,6 +164,7 @@ public class DataStaxBasedSessionObjectFactory {
 
 					cluster = builder.build();
 					clusterCache.put(key, cluster);
+					logger.info("New cluster created with properties: "+key);
 				}
 			}
 		}
