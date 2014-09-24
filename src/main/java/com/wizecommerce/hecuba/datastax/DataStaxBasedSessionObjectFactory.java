@@ -164,6 +164,7 @@ public class DataStaxBasedSessionObjectFactory {
 					cluster = builder.build();
 					clusterCache.put(key, cluster);
 					logger.info("New cluster created with properties: "+key);
+
 				}
 			}
 		}
