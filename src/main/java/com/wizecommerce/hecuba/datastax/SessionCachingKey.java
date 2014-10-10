@@ -141,7 +141,7 @@ public class SessionCachingKey {
 
 		@Override
 		public String toString() {
-			return Objects.toStringHelper(this).add(" locationUrls: ", locationUrls)
+			return Objects.toStringHelper(this).add(" locationUrls: ", Arrays.toString(locationUrls))
 					.add(" properties: ", clusterProperties).toString();
 		}
 	}
