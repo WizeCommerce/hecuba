@@ -73,7 +73,7 @@ public class SessionCachingKey {
 
 	@Override
 	public String toString() {
-		return Objects.toStringHelper(this).add("Cluster properties: ", clusterKey).add("keySpace", keySpace)
+		return Objects.toStringHelper(this).add("Cluster properties: ", clusterKey).add(" keySpace: ", keySpace)
 				.toString();
 	}
 
@@ -141,8 +141,8 @@ public class SessionCachingKey {
 
 		@Override
 		public String toString() {
-			return Objects.toStringHelper(this).add("locationUrls", locationUrls)
-					.add("properties", clusterProperties).toString();
+			return Objects.toStringHelper(this).add(" locationUrls: ", Arrays.toString(locationUrls))
+					.add(" properties: ", clusterProperties).toString();
 		}
 	}
 }
