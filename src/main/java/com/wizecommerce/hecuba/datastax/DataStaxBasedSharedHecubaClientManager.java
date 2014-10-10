@@ -110,7 +110,7 @@ public class DataStaxBasedSharedHecubaClientManager<K> extends HecubaClientManag
 		this.keyType = keyType;
 		String[] endpoints = Iterables.toArray(Splitter.on(":").split(parameters.getLocationURLs()),
 				String.class);
-		String keyspace = '"' + parameters.getKeyspace() + '"';
+		keyspace = '"' + parameters.getKeyspace() + '"';
 		SessionCachingKey key = new SessionCachingKey(endpoints, keyspace);
 		Map<String, Object> sessionProperties = new HashMap<String, Object>();
 		String datacenter = parameters.getDataCenter();

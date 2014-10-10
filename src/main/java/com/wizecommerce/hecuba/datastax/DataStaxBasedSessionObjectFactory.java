@@ -151,7 +151,7 @@ public class DataStaxBasedSessionObjectFactory {
 
 					PoolingOptions poolingOptions = null;
 					property = properties.get("maxConnectionsPerHost");
-					if (properties != null) {
+					if (property != null) {
 						poolingOptions = new PoolingOptions();
 						Integer maxConnectionsPerHost = (Integer) property;
 						poolingOptions.setMaxConnectionsPerHost(HostDistance.REMOTE, maxConnectionsPerHost);
