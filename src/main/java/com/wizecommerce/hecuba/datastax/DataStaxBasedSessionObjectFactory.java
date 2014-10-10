@@ -6,6 +6,9 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.annotation.concurrent.ThreadSafe;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.Cluster.Builder;
 import com.datastax.driver.core.HostDistance;
@@ -30,10 +33,11 @@ import com.wizecommerce.hecuba.datastax.SessionCachingKey.ClusterCachingKey;
  */
 @ThreadSafe
 public class DataStaxBasedSessionObjectFactory {
-	private Map<ClusterCachingKey, Cluster> clusterCache = null;
 
-	private Map<SessionCachingKey, Session> sessionCache = null;
-	private Map<SessionCachingKey, AtomicInteger> usersPerSession = null;
+	private static final Logger logger = LoggerFactory.getLogger(DataStaxBasedSessionObjectFactory.class);
+	final private Map<ClusterCachingKey, Cluster> clusterCache = new HashMap<>();
+	final private Map<SessionCachingKey, Session> sessionCache = new HashMap<>();
+	final private Map<SessionCachingKey, AtomicInteger> usersPerSession = new HashMap<>();
 
 	// Initializing egarly since its very light weight, until clusters and session are built. Guarantees
 	// thread safety.
@@ -41,9 +45,6 @@ public class DataStaxBasedSessionObjectFactory {
 	private static final DataStaxBasedSessionObjectFactory instance = new DataStaxBasedSessionObjectFactory();
 
 	private DataStaxBasedSessionObjectFactory() {
-		clusterCache = new HashMap<>();
-		sessionCache = new HashMap<>();
-		usersPerSession = new HashMap<>();
 	}
 
 	public static DataStaxBasedSessionObjectFactory getInstance() {
@@ -66,6 +67,7 @@ public class DataStaxBasedSessionObjectFactory {
 					session = cluster.connect(key.getKeySpace());
 					sessionCache.put(key, session);
 					usersPerSession.put(key, new AtomicInteger());
+					logger.info("New session created with properties: "+key);
 				}
 			}
 		}
@@ -77,8 +79,8 @@ public class DataStaxBasedSessionObjectFactory {
 		int count = usersPerSession.get(key).decrementAndGet();
 		if (count <= 0) {
 			Session session = sessionCache.remove(key);
-			// use different object to synchronize as this is independent from creation.
-			synchronized (clusterCache) {
+			//Synchronize so we don't close already closed session.
+			synchronized (usersPerSession) {
 				if (session != null) {
 					session.close();
 				}
@@ -90,76 +92,81 @@ public class DataStaxBasedSessionObjectFactory {
 		// No need of synchronizing here as getSession is already synchronized.
 		Cluster cluster = clusterCache.get(key);
 		if (cluster == null) {
-			Map<String, Object> properties = key.getProperties();
-			LoadBalancingPolicy loadBalancingPolicy;
-			Object property = properties.get("dataCenter");
-			if (property != null) {
-				loadBalancingPolicy = new DCAwareRoundRobinPolicy((String) property);
+			synchronized (clusterCache) {
+				if (cluster == null) {
+					Map<String, Object> properties = key.getProperties();
+					LoadBalancingPolicy loadBalancingPolicy;
+					Object property = properties.get("dataCenter");
+					if (property != null) {
+						loadBalancingPolicy = new DCAwareRoundRobinPolicy((String) property);
 
-			} else {
-				loadBalancingPolicy = new RoundRobinPolicy();
-			}
-			loadBalancingPolicy = new TokenAwarePolicy(loadBalancingPolicy);
-			loadBalancingPolicy = LatencyAwarePolicy.builder(loadBalancingPolicy).build();
+					} else {
+						loadBalancingPolicy = new RoundRobinPolicy();
+					}
+					loadBalancingPolicy = new TokenAwarePolicy(loadBalancingPolicy);
+					loadBalancingPolicy = LatencyAwarePolicy.builder(loadBalancingPolicy).build();
 
-			Builder builder = Cluster.builder().addContactPoints(key.getLocationUrls())
-					.withLoadBalancingPolicy(loadBalancingPolicy);
+					Builder builder = Cluster.builder().addContactPoints(key.getLocationUrls())
+							.withLoadBalancingPolicy(loadBalancingPolicy);
 
-			property = properties.get("port");
-			if (property != null) {
-				builder.withPort((Integer) property);
-			}
+					property = properties.get("port");
+					if (property != null) {
+						builder.withPort((Integer) property);
+					}
 
-			property = properties.get("username");
-			if (property != null) {
-				Object pass = properties.get("password");
-				if (pass != null) {
-					builder.withCredentials((String) property, (String) pass);
+					property = properties.get("username");
+					if (property != null) {
+						Object pass = properties.get("password");
+						if (pass != null) {
+							builder.withCredentials((String) property, (String) pass);
+						}
+					}
+
+					property = properties.get("compressionEnabled");
+					if (property != null && (Boolean) property) {
+
+						builder.withCompression(Compression.LZ4);
+					}
+
+					SocketOptions socketOptions = null;
+					property = properties.get("readTimeout");
+					if (property != null) {
+						socketOptions = new SocketOptions();
+
+						socketOptions.setReadTimeoutMillis((Integer) property);
+					}
+
+					property = properties.get("connectTimeout");
+					if (property != null) {
+						if (socketOptions == null) {
+							socketOptions = new SocketOptions();
+						}
+						socketOptions.setConnectTimeoutMillis((Integer) property);
+
+					}
+
+					if (socketOptions != null) {
+						builder.withSocketOptions(socketOptions);
+					}
+
+					PoolingOptions poolingOptions = null;
+					property = properties.get("maxConnectionsPerHost");
+					if (property != null) {
+						poolingOptions = new PoolingOptions();
+						Integer maxConnectionsPerHost = (Integer) property;
+						poolingOptions.setMaxConnectionsPerHost(HostDistance.REMOTE, maxConnectionsPerHost);
+						poolingOptions.setMaxConnectionsPerHost(HostDistance.LOCAL, maxConnectionsPerHost);
+					}
+
+					if (poolingOptions != null) {
+						builder.withPoolingOptions(poolingOptions);
+					}
+
+					cluster = builder.build();
+					clusterCache.put(key, cluster);
+					logger.info("New cluster created with properties: "+key);
 				}
 			}
-
-			property = properties.get("compressionEnabled");
-			if (property != null && (Boolean) property) {
-
-				builder.withCompression(Compression.LZ4);
-			}
-
-			SocketOptions socketOptions = null;
-			property = properties.get("readTimeout");
-			if (property != null) {
-				socketOptions = new SocketOptions();
-
-				socketOptions.setReadTimeoutMillis((Integer) property);
-			}
-
-			property = properties.get("connectTimeout");
-			if (property != null) {
-				if (socketOptions == null) {
-					socketOptions = new SocketOptions();
-				}
-				socketOptions.setConnectTimeoutMillis((Integer) property);
-
-			}
-
-			if (socketOptions != null) {
-				builder.withSocketOptions(socketOptions);
-			}
-
-			PoolingOptions poolingOptions = null;
-			property = properties.get("maxConnectionsPerHost");
-			if (properties != null) {
-				poolingOptions = new PoolingOptions();
-				Integer maxConnectionsPerHost = (Integer) property;
-				poolingOptions.setMaxConnectionsPerHost(HostDistance.REMOTE, maxConnectionsPerHost);
-				poolingOptions.setMaxConnectionsPerHost(HostDistance.LOCAL, maxConnectionsPerHost);
-			}
-
-			if (poolingOptions != null) {
-				builder.withPoolingOptions(poolingOptions);
-			}
-
-			cluster = builder.build();
-			clusterCache.put(key, cluster);
 		}
 		return cluster;
 	}
